@@ -1,0 +1,494 @@
+<title>CODI-IS — Presentation Demo Script</title>
+<style>
+  :root {
+    --paper: #F7F3F1;
+    --surface: #FFFFFF;
+    --ink: #241A1A;
+    --ink-soft: #6B5D5A;
+    --ink-faint: #97877F;
+    --line: #E4DBD8;
+    --maroon: #630505;
+    --maroon-tint: rgba(99, 5, 5, 0.07);
+    --say-bg: #FBF3DD;
+    --say-border: #E3C878;
+    --say-ink: #6B5316;
+    --guard-bg: #FBEAE7;
+    --guard-border: #D98E82;
+    --guard-ink: #7A2E22;
+
+    --role-complainant: #2F4A63;
+    --role-complainant-tint: rgba(47, 74, 99, 0.09);
+    --role-respondent: #256B62;
+    --role-respondent-tint: rgba(37, 107, 98, 0.09);
+    --role-secretariat: #630505;
+    --role-secretariat-tint: rgba(99, 5, 5, 0.07);
+    --role-chairperson: #8A6212;
+    --role-chairperson-tint: rgba(138, 98, 18, 0.1);
+    --role-committee: #5B3A73;
+    --role-committee-tint: rgba(91, 58, 115, 0.09);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Roboto Mono", monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #191212; --surface: #221A1A; --ink: #F3EAE8; --ink-soft: #C9B8B4; --ink-faint: #8E7A75; --line: #3A2C2A;
+    --maroon: #C4726B; --maroon-tint: rgba(196, 114, 107, 0.14);
+    --say-bg: #2E2712; --say-border: #6B5316; --say-ink: #E3C878;
+    --guard-bg: #331A16; --guard-border: #7A2E22; --guard-ink: #E8A99C;
+    --role-complainant: #83A6CB; --role-complainant-tint: rgba(131, 166, 203, 0.12);
+    --role-respondent: #6FC2B4; --role-respondent-tint: rgba(111, 194, 180, 0.12);
+    --role-secretariat: #C4726B; --role-secretariat-tint: rgba(196, 114, 107, 0.13);
+    --role-chairperson: #D1A24A; --role-chairperson-tint: rgba(209, 162, 74, 0.14);
+    --role-committee: #B593D1; --role-committee-tint: rgba(181, 147, 209, 0.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #191212; --surface: #221A1A; --ink: #F3EAE8; --ink-soft: #C9B8B4; --ink-faint: #8E7A75; --line: #3A2C2A;
+      --maroon: #C4726B; --maroon-tint: rgba(196, 114, 107, 0.14);
+      --say-bg: #2E2712; --say-border: #6B5316; --say-ink: #E3C878;
+      --guard-bg: #331A16; --guard-border: #7A2E22; --guard-ink: #E8A99C;
+      --role-complainant: #83A6CB; --role-complainant-tint: rgba(131, 166, 203, 0.12);
+      --role-respondent: #6FC2B4; --role-respondent-tint: rgba(111, 194, 180, 0.12);
+      --role-secretariat: #C4726B; --role-secretariat-tint: rgba(196, 114, 107, 0.13);
+      --role-chairperson: #D1A24A; --role-chairperson-tint: rgba(209, 162, 74, 0.14);
+      --role-committee: #B593D1; --role-committee-tint: rgba(181, 147, 209, 0.13);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--maroon); color: white; }
+
+  .shell { max-width: 1180px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  /* ---- Header ---- */
+  header.top { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 28px; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--maroon); font-weight: 600;
+  }
+  h1 { margin: 8px 0 6px; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede { margin: 0; max-width: 68ch; font-size: 15px; line-height: 1.6; color: var(--ink-soft); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 18px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+  .meta-value { font-size: 14px; font-weight: 600; }
+  .meta-value.mono { font-family: var(--font-mono); font-size: 13px; }
+
+  /* ---- Layout: sticky nav + content ---- */
+  .layout { display: grid; grid-template-columns: 232px 1fr; gap: 36px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .toc { position: static !important; } }
+
+  .toc { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 2px; }
+  .toc-title { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin: 0 0 8px 10px; }
+  .toc a {
+    display: flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--ink-soft);
+    font-size: 13px; padding: 6px 10px; border-radius: 5px; border-left: 2px solid transparent;
+  }
+  .toc a:hover { background: var(--maroon-tint); color: var(--ink); }
+  .toc .toc-time { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+  .toc-total { margin: 10px 10px 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-soft); }
+  .toc-total strong { color: var(--ink); font-family: var(--font-mono); }
+
+  /* ---- Prep checklist ---- */
+  .prep {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; margin-bottom: 34px;
+  }
+  .prep h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+  .prep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; }
+  .check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .check-list li { display: flex; gap: 9px; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+  .check-list li::before {
+    content: ""; flex: none; width: 15px; height: 15px; margin-top: 2px; border-radius: 4px;
+    border: 1.6px solid var(--ink-faint); background: var(--paper);
+  }
+  .cred-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cred-table th { text-align: left; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; padding: 0 8px 6px 0; }
+  .cred-table td { padding: 5px 8px 5px 0; border-top: 1px solid var(--line); font-family: var(--font-mono); font-size: 12px; }
+  .cred-table td.role { font-family: var(--font-sans); font-weight: 600; font-size: 12.5px; }
+
+  /* ---- Phase cards ---- */
+  .phase {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 22px 24px; margin-bottom: 20px; scroll-margin-top: 20px;
+  }
+  .phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 4px; }
+  .phase-num { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+  .phase-title { font-size: 17px; font-weight: 700; margin: 0; flex: 1; min-width: 200px; }
+  .phase-time {
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint);
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px;
+  }
+  .role-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px 3px 8px; border-radius: 20px; letter-spacing: 0.01em;
+  }
+  .role-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .role-COMPLAINANT { background: var(--role-complainant-tint); color: var(--role-complainant); }
+  .role-RESPONDENT { background: var(--role-respondent-tint); color: var(--role-respondent); }
+  .role-SECRETARIAT { background: var(--role-secretariat-tint); color: var(--role-secretariat); }
+  .role-CHAIRPERSON { background: var(--role-chairperson-tint); color: var(--role-chairperson); }
+  .role-COMMITTEE { background: var(--role-committee-tint); color: var(--role-committee); }
+
+  .screen-path {
+    font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); margin: 10px 0 14px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; display: inline-block;
+  }
+
+  .do-list { list-style: none; margin: 0 0 14px; padding: 0; counter-reset: step; display: flex; flex-direction: column; gap: 9px; }
+  .do-list li {
+    counter-increment: step; display: flex; gap: 10px; font-size: 14px; line-height: 1.5;
+  }
+  .do-list li::before {
+    content: counter(step); flex: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--maroon-tint); color: var(--maroon); font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .do-list code { font-family: var(--font-mono); font-size: 12.5px; background: var(--maroon-tint); color: var(--maroon); padding: 1px 5px; border-radius: 3px; }
+
+  .say {
+    background: var(--say-bg); border-left: 3px solid var(--say-border); border-radius: 0 4px 4px 0;
+    padding: 11px 14px; font-size: 13.5px; line-height: 1.55; color: var(--say-ink); margin-top: 4px;
+  }
+  .say strong.lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.75; }
+
+  .guard {
+    background: var(--guard-bg); border-left: 3px solid var(--guard-border); border-radius: 0 4px 4px 0;
+    padding: 11px 14px; font-size: 13px; line-height: 1.55; color: var(--guard-ink); margin-top: 10px;
+  }
+  .guard strong.lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.8; }
+
+  .optional-tag {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-faint); border: 1px dashed var(--ink-faint); border-radius: 4px; padding: 2px 7px;
+  }
+
+  /* ---- Section divider ---- */
+  .divider { display: flex; align-items: center; gap: 12px; margin: 34px 0 18px; }
+  .divider .line { flex: 1; height: 1px; background: var(--line); }
+  .divider span { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+
+  .closing {
+    background: var(--maroon-tint); border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; margin-top: 8px;
+  }
+  .closing h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+  .closing p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+  .stack-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .stack-pills span {
+    font-family: var(--font-mono); font-size: 11.5px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 3px 9px; color: var(--ink);
+  }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <span class="eyebrow">CODI-IS — Presentation Runbook</span>
+    <h1>Demo Script: One Case, Start to Finish</h1>
+    <p class="lede">
+      Follow one complaint through the entire system, live, in front of your teacher — filing,
+      intake, approvals, hearings, and resolution — then a short tour of the supporting tools.
+      Bold lines are what to click; the tan boxes are what to say.
+    </p>
+    <div class="meta-row">
+      <div class="meta-item"><span class="meta-label">Core run time</span><span class="meta-value">~13 min</span></div>
+      <div class="meta-item"><span class="meta-label">With optional tour</span><span class="meta-value">~18 min</span></div>
+      <div class="meta-item"><span class="meta-label">Site</span><span class="meta-value mono">localhost:5173</span></div>
+      <div class="meta-item"><span class="meta-label">Password for every account</span><span class="meta-value mono">Passw0rd!</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc">
+      <p class="toc-title">On this page</p>
+      <a href="#prep"><span>Before you start</span></a>
+      <a href="#p1"><span>1 · File a complaint</span><span class="toc-time">2m</span></a>
+      <a href="#p2"><span>2 · Secretariat intake</span><span class="toc-time">1.5m</span></a>
+      <a href="#p3"><span>3 · Show-cause order</span><span class="toc-time">2m</span></a>
+      <a href="#p4"><span>4 · Respondent answers</span><span class="toc-time">1.5m</span></a>
+      <a href="#p5"><span>5 · Prima facie + risk</span><span class="toc-time">2m</span></a>
+      <a href="#p6"><span>6 · Charge + pathway</span><span class="toc-time">2m</span></a>
+      <a href="#p7"><span>7 · Hearings + minutes</span><span class="toc-time">3m</span></a>
+      <a href="#p8"><span>8 · Recommendation → outcome</span><span class="toc-time">2m</span></a>
+      <a href="#p9"><span>9 · The paper trail</span><span class="toc-time">1m</span></a>
+      <a href="#p10"><span>10 · Supporting tools</span><span class="toc-time">opt</span></a>
+      <a href="#p11"><span>11 · The other pathway</span><span class="toc-time">opt</span></a>
+      <a href="#closing"><span>Closing</span></a>
+      <div class="toc-total">Core phases 1–9: <strong>~13 min</strong></div>
+    </nav>
+
+    <div class="content">
+      <section id="prep" class="prep">
+        <h2>Before your teacher walks in</h2>
+        <div class="prep-grid">
+          <ul class="check-list">
+            <li>Both dev servers running — <code style="font-family:var(--font-mono);background:var(--maroon-tint);color:var(--maroon);padding:1px 5px;border-radius:3px;">npm run dev</code> in <code style="font-family:var(--font-mono);background:var(--maroon-tint);color:var(--maroon);padding:1px 5px;border-radius:3px;">server/</code> and <code style="font-family:var(--font-mono);background:var(--maroon-tint);color:var(--maroon);padding:1px 5px;border-radius:3px;">client/</code></li>
+            <li>Browser open to <span class="meta-value mono" style="font-size:12.5px;">localhost:5173/login</span></li>
+            <li>Data reset to a clean state (<code style="font-family:var(--font-mono);background:var(--maroon-tint);color:var(--maroon);padding:1px 5px;border-radius:3px;">node prisma/wipe.js && node prisma/seed.js</code>)</li>
+            <li>Any small image or PDF on hand to upload as the "notarized document" — a phone photo works</li>
+            <li>Know where the profile menu is: top-right corner → your name → <em>Log out</em></li>
+          </ul>
+          <table class="cred-table">
+            <thead><tr><th>Role</th><th>Email</th></tr></thead>
+            <tbody>
+              <tr><td class="role">Complainant</td><td>complainant@bulsu.edu.ph</td></tr>
+              <tr><td class="role">Respondent</td><td>respondent@bulsu.edu.ph</td></tr>
+              <tr><td class="role">Secretariat</td><td>secretariat@bulsu.edu.ph</td></tr>
+              <tr><td class="role">Chairperson</td><td>chair@bulsu.edu.ph</td></tr>
+              <tr><td class="role">Committee</td><td>committee1@bulsu.edu.ph</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="divider"><span>The live case</span><div class="line"></div></div>
+
+      <section id="p1" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">01</span>
+          <h3 class="phase-title">File a complaint</h3>
+          <span class="role-badge role-COMPLAINANT">Complainant</span>
+          <span class="phase-time">~2 min</span>
+        </div>
+        <div class="screen-path">/login → /complaints/new</div>
+        <ol class="do-list">
+          <li>Log in as the Complainant.</li>
+          <li>Open <code>File a Complaint</code>. Fill in the respondent's name, department, and whether they're a student or personnel.</li>
+          <li>Write a short incident description — a sentence is enough for the demo.</li>
+          <li>Upload the notarized complaint document, then submit.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Every case starts with a sworn, notarized complaint. The system gives the complainant a
+          3-day window to get it notarized — if that window lapses with nothing on file, the
+          Committee can dismiss the case for non-compliance automatically. It's not just a form,
+          it's enforcing the actual procedure.
+        </div>
+      </section>
+
+      <section id="p2" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">02</span>
+          <h3 class="phase-title">Secretariat intake</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="phase-time">~1.5 min</span>
+        </div>
+        <div class="screen-path">Log out → log in as Secretariat → /cases</div>
+        <ol class="do-list">
+          <li>Open the new case from the Cases list.</li>
+          <li>Confirm the notarized document, then click <code>Verify</code>.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          The Secretariat is the intake gatekeeper — every complaint is logged, timestamped, and
+          checked before it goes anywhere near a hearing.
+        </div>
+      </section>
+
+      <section id="p3" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">03</span>
+          <h3 class="phase-title">Show-cause order: draft, then approve</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="role-badge role-CHAIRPERSON">Chairperson</span>
+          <span class="phase-time">~2 min</span>
+        </div>
+        <ol class="do-list">
+          <li>As Secretariat, draft the show-cause order (a line or two of charge details).</li>
+          <li>Log out, log back in as the Chairperson.</li>
+          <li>Open the case and click <code>Approve</code> to issue the order.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          This is a genuine two-person control, not a rubber stamp — the Secretariat drafts it,
+          but nothing reaches the Respondent until the Chairperson signs off. The Chairperson can
+          also send it back for revision instead.
+        </div>
+      </section>
+
+      <section id="p4" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">04</span>
+          <h3 class="phase-title">Respondent answers</h3>
+          <span class="role-badge role-RESPONDENT">Respondent</span>
+          <span class="phase-time">~1.5 min</span>
+        </div>
+        <ol class="do-list">
+          <li>Log out, log in as the Respondent.</li>
+          <li>Open the case, write a short answer, submit.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          If the Respondent doesn't answer in time, the process doesn't stall — the Secretariat
+          can proceed without a response once the 5-day window lapses.
+        </div>
+      </section>
+
+      <section id="p5" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">05</span>
+          <h3 class="phase-title">Prima facie evaluation + risk score</h3>
+          <span class="role-badge role-COMMITTEE">Committee</span>
+          <span class="phase-time">~2 min</span>
+        </div>
+        <ol class="do-list">
+          <li>Log out, log in as a Committee member.</li>
+          <li>Open the case, evaluate for prima facie — mark it <code>Found</code> with a short rationale.</li>
+          <li>Run the risk assessment and point out the classification it produces.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          The risk score is a decision-support cue, not an automatic verdict — it flags severity
+          and urgency for the Committee, who can override it with their own judgment call if they
+          disagree.
+        </div>
+      </section>
+
+      <section id="p6" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">06</span>
+          <h3 class="phase-title">Formal charge, then pathway choice</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="role-badge role-RESPONDENT">Respondent</span>
+          <span class="role-badge role-COMPLAINANT">Complainant</span>
+          <span class="phase-time">~2 min</span>
+        </div>
+        <ol class="do-list">
+          <li>As Secretariat, issue the formal charge.</li>
+          <li>As Respondent, submit a formal answer, then choose <code>Formal Investigation</code> as the pathway.</li>
+          <li>As Complainant, also choose <code>Formal Investigation</code>.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Both sides choose independently, without seeing what the other picked. Agree, and it's
+          final immediately. If they don't agree, the Secretariat has the final call — that's how
+          real cases stay unblocked instead of deadlocking on a disagreement.
+        </div>
+      </section>
+
+      <section id="p7" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">07</span>
+          <h3 class="phase-title">Hearings — with required minutes</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="phase-time">~3 min</span>
+        </div>
+        <ol class="do-list">
+          <li>Schedule the Pre-Trial hearing (any date/time works).</li>
+          <li>Try clicking <code>End Formal Investigation</code> right away — point out it's blocked.</li>
+          <li>Attach the Pre-Trial minutes, then schedule a Trial hearing and attach its minutes too.</li>
+          <li>Now click <code>End Formal Investigation</code> — it goes through.</li>
+        </ol>
+        <div class="guard">
+          <strong class="lbl">Why step 2 matters</strong>
+          This is a real server-side rule, not just a UI hint: <em>"Attach the minutes for every
+          hearing before ending the investigation."</em> Skipping the button click won't get around
+          it — the API itself refuses the request.
+        </div>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Every hearing — Pre-Trial or Trial — now needs its own minutes on file. It's one of the
+          most recent pieces I added: a real procedural safeguard the old version didn't have.
+        </div>
+      </section>
+
+      <section id="p8" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">08</span>
+          <h3 class="phase-title">Recommendation, then outcome</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="phase-time">~2 min</span>
+        </div>
+        <ol class="do-list">
+          <li>Attach the recommendation document, then click <code>File recommendation</code> — point out the status changes to <code>Recommendation Filed</code> and the recommendation form disappears, replaced by an "awaiting outcome" state.</li>
+          <li>Click into <code>Record outcome</code>, pick <code>Liable</code> or <code>Not Liable</code>, write a rationale, submit.</li>
+          <li>Show the case status land on <code>Resolved</code> (or <code>Dismissed</code>).</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          These used to be one combined step. I split them because in the real procedure, the
+          outcome doesn't come back instantly — it's sent out and then comes back later from the
+          University President's office. Filing the recommendation and recording the outcome are
+          genuinely two separate moments in time, so the system treats them that way now.
+        </div>
+      </section>
+
+      <section id="p9" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">09</span>
+          <h3 class="phase-title">The paper trail</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="phase-time">~1 min</span>
+        </div>
+        <ol class="do-list">
+          <li>Scroll down to the case timeline and slowly scroll through the full history.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Every action on this case — from filing to resolution — is logged with who did it and
+          when. Nothing happens off the record.
+        </div>
+      </section>
+
+      <div class="divider"><span>If time allows</span><div class="line"></div></div>
+
+      <section id="p10" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">10</span>
+          <h3 class="phase-title">Supporting tools tour</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="optional-tag">optional</span>
+        </div>
+        <ol class="do-list">
+          <li><code>Calendar</code> — every deadline, hearing, and meeting across all cases in one view. Point out the case filter dropdown, staff-only, for narrowing it down to one case.</li>
+          <li><code>Notifications</code> — every role gets notified the moment something needs their attention.</li>
+          <li>Dashboard analytics — case counts by status, incidents by college, and the monthly filing trend, for CODI staff.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Beyond individual cases, the Secretariat and Committee also get a birds-eye view — this
+          is what makes it a case <em>management</em> system, not just a form.
+        </div>
+      </section>
+
+      <section id="p11" class="phase">
+        <div class="phase-head">
+          <span class="phase-num">11</span>
+          <h3 class="phase-title">The other pathway, already resolved</h3>
+          <span class="role-badge role-SECRETARIAT">Secretariat</span>
+          <span class="optional-tag">optional — needs a pre-staged case</span>
+        </div>
+        <ol class="do-list">
+          <li>Open a second, already-resolved case that went through <code>Position Paper</code> instead.</li>
+          <li>Scroll to show both parties' position papers, the CODI report, and the final decision.</li>
+        </ol>
+        <div class="say">
+          <strong class="lbl">Say</strong>
+          Not every case needs a full hearing. For simpler cases, both sides can agree to go
+          straight to a documents-only track instead — position papers, a CODI report, then a
+          decision. Same system, a lighter process.
+        </div>
+      </section>
+
+      <div class="divider"><span>Wrap-up</span><div class="line"></div></div>
+
+      <section id="closing" class="closing">
+        <h2>Closing line</h2>
+        <p>
+          "That's the full lifecycle — from a student filing a complaint, through every approval
+          gateway the actual procedure requires, to a recorded, appealable outcome. Every rule you
+          saw enforced — the notarization window, the two-person show-cause approval, the required
+          hearing minutes, the two-stage recommendation — is a real safeguard from the process,
+          not something I invented for the demo."
+        </p>
+        <div class="stack-pills">
+          <span>React + Vite</span><span>Express</span><span>PostgreSQL</span><span>Prisma</span><span>JWT auth</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

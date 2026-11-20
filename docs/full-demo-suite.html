@@ -1,0 +1,527 @@
+<title>CODI-IS — Full Demo & Test Scenario Suite</title>
+<style>
+  :root {
+    --paper: #F7F3F1; --surface: #FFFFFF; --ink: #241A1A; --ink-soft: #6B5D5A; --ink-faint: #97877F; --line: #E4DBD8;
+    --maroon: #630505; --maroon-tint: rgba(99, 5, 5, 0.07);
+    --say-bg: #FBF3DD; --say-border: #E3C878; --say-ink: #6B5316;
+    --guard-bg: #FBEAE7; --guard-border: #D98E82; --guard-ink: #7A2E22;
+    --branch-bg: #EAF1EE; --branch-border: #6FA98F; --branch-ink: #285C46;
+    --gap-bg: #F0EDF7; --gap-border: #9C87C4; --gap-ink: #4A3A6B;
+    --ok: #2F6B4A; --ok-tint: rgba(47, 107, 74, 0.12);
+    --partial: #8A6212; --partial-tint: rgba(138, 98, 18, 0.12);
+    --missing: #A33A2E; --missing-tint: rgba(163, 58, 46, 0.1);
+
+    --role-complainant: #2F4A63; --role-complainant-tint: rgba(47, 74, 99, 0.09);
+    --role-respondent: #256B62; --role-respondent-tint: rgba(37, 107, 98, 0.09);
+    --role-secretariat: #630505; --role-secretariat-tint: rgba(99, 5, 5, 0.07);
+    --role-chairperson: #8A6212; --role-chairperson-tint: rgba(138, 98, 18, 0.1);
+    --role-committee: #5B3A73; --role-committee-tint: rgba(91, 58, 115, 0.09);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Roboto Mono", monospace;
+  }
+  :root[data-theme="dark"] {
+    --paper: #191212; --surface: #221A1A; --ink: #F3EAE8; --ink-soft: #C9B8B4; --ink-faint: #8E7A75; --line: #3A2C2A;
+    --maroon: #C4726B; --maroon-tint: rgba(196, 114, 107, 0.14);
+    --say-bg: #2E2712; --say-border: #6B5316; --say-ink: #E3C878;
+    --guard-bg: #331A16; --guard-border: #7A2E22; --guard-ink: #E8A99C;
+    --branch-bg: #16261F; --branch-border: #3E8567; --branch-ink: #8FCBAE;
+    --gap-bg: #241B33; --gap-border: #6E5A9C; --gap-ink: #C3B3E6;
+    --ok: #6FC090; --ok-tint: rgba(111, 192, 144, 0.16);
+    --partial: #D1A24A; --partial-tint: rgba(209, 162, 74, 0.16);
+    --missing: #D97A6B; --missing-tint: rgba(217, 122, 107, 0.16);
+    --role-complainant: #83A6CB; --role-complainant-tint: rgba(131, 166, 203, 0.12);
+    --role-respondent: #6FC2B4; --role-respondent-tint: rgba(111, 194, 180, 0.12);
+    --role-secretariat: #C4726B; --role-secretariat-tint: rgba(196, 114, 107, 0.13);
+    --role-chairperson: #D1A24A; --role-chairperson-tint: rgba(209, 162, 74, 0.14);
+    --role-committee: #B593D1; --role-committee-tint: rgba(181, 147, 209, 0.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #191212; --surface: #221A1A; --ink: #F3EAE8; --ink-soft: #C9B8B4; --ink-faint: #8E7A75; --line: #3A2C2A;
+      --maroon: #C4726B; --maroon-tint: rgba(196, 114, 107, 0.14);
+      --say-bg: #2E2712; --say-border: #6B5316; --say-ink: #E3C878;
+      --guard-bg: #331A16; --guard-border: #7A2E22; --guard-ink: #E8A99C;
+      --branch-bg: #16261F; --branch-border: #3E8567; --branch-ink: #8FCBAE;
+      --gap-bg: #241B33; --gap-border: #6E5A9C; --gap-ink: #C3B3E6;
+      --ok: #6FC090; --ok-tint: rgba(111, 192, 144, 0.16);
+      --partial: #D1A24A; --partial-tint: rgba(209, 162, 74, 0.16);
+      --missing: #D97A6B; --missing-tint: rgba(217, 122, 107, 0.16);
+      --role-complainant: #83A6CB; --role-complainant-tint: rgba(131, 166, 203, 0.12);
+      --role-respondent: #6FC2B4; --role-respondent-tint: rgba(111, 194, 180, 0.12);
+      --role-secretariat: #C4726B; --role-secretariat-tint: rgba(196, 114, 107, 0.13);
+      --role-chairperson: #D1A24A; --role-chairperson-tint: rgba(209, 162, 74, 0.14);
+      --role-committee: #B593D1; --role-committee-tint: rgba(181, 147, 209, 0.13);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--maroon); color: white; }
+  code.kw { font-family: var(--font-mono); font-size: 12.5px; background: var(--maroon-tint); color: var(--maroon); padding: 1px 5px; border-radius: 3px; }
+
+  .shell { max-width: 1180px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  header.top { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 28px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--maroon); font-weight: 600; }
+  h1 { margin: 8px 0 6px; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede { margin: 0; max-width: 70ch; font-size: 15px; line-height: 1.6; color: var(--ink-soft); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 18px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+  .meta-value { font-size: 14px; font-weight: 600; }
+  .meta-value.mono { font-family: var(--font-mono); font-size: 13px; }
+
+  h2.section-title {
+    font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700;
+    margin: 44px 0 14px;
+  }
+  h2.section-title:first-of-type { margin-top: 0; }
+
+  /* ---- Alignment table ---- */
+  .align-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table.align { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+  table.align th {
+    text-align: left; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint);
+    font-weight: 700; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--paper);
+  }
+  table.align td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.5; }
+  table.align tr:last-child td { border-bottom: none; }
+  table.align td.step { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+    padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  }
+  .status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-built { background: var(--ok-tint); color: var(--ok); }
+  .status-gap { background: var(--missing-tint); color: var(--missing); }
+
+  .gap-note {
+    background: var(--gap-bg); border-left: 3px solid var(--gap-border); border-radius: 0 4px 4px 0;
+    padding: 12px 15px; font-size: 13px; line-height: 1.6; color: var(--gap-ink); margin: 14px 0 0;
+  }
+  .gap-note strong.lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.8; }
+
+  /* ---- Scenario index ---- */
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .scenario-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px;
+    text-decoration: none; color: var(--ink); display: flex; flex-direction: column; gap: 6px;
+  }
+  .scenario-card:hover { border-color: var(--maroon); }
+  .scenario-card .num { font-family: var(--font-mono); font-size: 11px; color: var(--maroon); font-weight: 700; }
+  .scenario-card .title { font-size: 14.5px; font-weight: 700; }
+  .scenario-card .desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+  .scenario-card .foot { display: flex; gap: 8px; margin-top: 4px; }
+  .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.03em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; color: var(--ink-faint); }
+
+  /* ---- Prep ---- */
+  .prep { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; }
+  .prep h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+  .prep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; }
+  .check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .check-list li { display: flex; gap: 9px; font-size: 13.5px; line-height: 1.5; }
+  .check-list li::before { content: ""; flex: none; width: 15px; height: 15px; margin-top: 2px; border-radius: 4px; border: 1.6px solid var(--ink-faint); background: var(--paper); }
+  .cred-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cred-table th { text-align: left; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; padding: 0 8px 6px 0; }
+  .cred-table td { padding: 5px 8px 5px 0; border-top: 1px solid var(--line); font-family: var(--font-mono); font-size: 12px; }
+  .cred-table td.role { font-family: var(--font-sans); font-weight: 600; font-size: 12.5px; }
+
+  /* ---- Phase cards ---- */
+  .phase { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 22px 24px; margin-bottom: 16px; scroll-margin-top: 20px; }
+  .phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 4px; }
+  .phase-num { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+  .phase-title { font-size: 16.5px; font-weight: 700; margin: 0; flex: 1; min-width: 180px; }
+  .paper-badge {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.03em; color: var(--ink-faint);
+    border: 1px dashed var(--line); border-radius: 4px; padding: 2px 8px;
+  }
+  .role-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 3px 10px 3px 8px; border-radius: 20px; }
+  .role-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .role-COMPLAINANT { background: var(--role-complainant-tint); color: var(--role-complainant); }
+  .role-RESPONDENT { background: var(--role-respondent-tint); color: var(--role-respondent); }
+  .role-SECRETARIAT { background: var(--role-secretariat-tint); color: var(--role-secretariat); }
+  .role-CHAIRPERSON { background: var(--role-chairperson-tint); color: var(--role-chairperson); }
+  .role-COMMITTEE { background: var(--role-committee-tint); color: var(--role-committee); }
+
+  .do-list { list-style: none; margin: 10px 0 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; gap: 8px; }
+  .do-list li { counter-increment: step; display: flex; gap: 10px; font-size: 13.5px; line-height: 1.5; }
+  .do-list li::before {
+    content: counter(step); flex: none; width: 19px; height: 19px; border-radius: 50%; background: var(--maroon-tint); color: var(--maroon);
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+
+  .say { background: var(--say-bg); border-left: 3px solid var(--say-border); border-radius: 0 4px 4px 0; padding: 10px 14px; font-size: 13px; line-height: 1.55; color: var(--say-ink); margin-top: 10px; }
+  .guard { background: var(--guard-bg); border-left: 3px solid var(--guard-border); border-radius: 0 4px 4px 0; padding: 10px 14px; font-size: 12.5px; line-height: 1.55; color: var(--guard-ink); margin-top: 10px; }
+  .branch { background: var(--branch-bg); border-left: 3px solid var(--branch-border); border-radius: 0 4px 4px 0; padding: 10px 14px; font-size: 13px; line-height: 1.55; color: var(--branch-ink); margin-top: 10px; }
+  .say strong.lbl, .guard strong.lbl, .branch strong.lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.8; }
+
+  .stage-tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.03em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px; }
+  .stage-tag.pre { border: 1px dashed var(--partial); color: var(--partial); background: var(--partial-tint); }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 36px 0 18px; }
+  .divider .line { flex: 1; height: 1px; background: var(--line); }
+  .divider span { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+
+  .closing { background: var(--maroon-tint); border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; margin-top: 8px; }
+  .closing h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+  .closing p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+  .closing p:last-child { margin-bottom: 0; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <span class="eyebrow">CODI-IS — Full Demo &amp; Test Scenario Suite</span>
+    <h1>Every Pathway, Mapped to the Procedure</h1>
+    <p class="lede">
+      Built directly from <em>"How to Report a Gender-Based Sexual Harassment Complaint"</em> —
+      your paper's own institutional flowchart. Each phase below is tagged with the exact step
+      of that procedure it demonstrates, and the coverage table up top is honest about the two
+      branches the system doesn't implement yet, so nothing in your defense catches you off guard.
+    </p>
+    <div class="meta-row">
+      <div class="meta-item"><span class="meta-label">Main path run time</span><span class="meta-value">~13 min</span></div>
+      <div class="meta-item"><span class="meta-label">Full suite, all 5 scenarios</span><span class="meta-value">~25 min</span></div>
+      <div class="meta-item"><span class="meta-label">Site</span><span class="meta-value mono">localhost:5173</span></div>
+      <div class="meta-item"><span class="meta-label">Password for every account</span><span class="meta-value mono">Passw0rd!</span></div>
+    </div>
+  </header>
+
+  <h2 class="section-title">Procedure alignment</h2>
+  <div class="align-table-wrap">
+    <table class="align">
+      <thead>
+        <tr><th>Paper step</th><th>What the paper describes</th><th>What CODI-IS does</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="step">STEP 1.A</td>
+          <td>Written complaint — signed, notarized, filed through CODI/GAD Secretariat</td>
+          <td>Complainant submits online; uploads the notarized document; Secretariat confirms notarization</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 1.B</td>
+          <td>Oral complaint, reduced to writing by the Secretariat</td>
+          <td>No intake path for the Secretariat to file on a walk-in complainant's behalf — only self-service written submission exists</td>
+          <td><span class="status-pill status-gap">Not built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 2</td>
+          <td>Submission to CODI; Respondent notified; given opportunity to respond</td>
+          <td>Verification → Show-Cause Order (Secretariat drafts, Chairperson approves) → Respondent answers</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 3</td>
+          <td>CODI determines prima facie case — proceed, or dismiss</td>
+          <td>Committee's prima facie evaluation; auto-dismissal if found lacking</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 4</td>
+          <td>Respondent's Answer; case proceeds via Formal Investigation <em>or</em> Position Papers</td>
+          <td>Formal Answer + independent pathway choice by both parties (Secretariat breaks ties); full hearing workflow with required minutes, or a documents-only Position Paper track</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 5</td>
+          <td>CODI Report &amp; Recommendation → President's Decision (Liable / Not Liable)</td>
+          <td>CODI report + deliberation (Position Paper) or filed recommendation (Formal Investigation), then a separately recorded outcome</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 5</td>
+          <td>Board Action: penalties designated; Respondent may appeal to the Board of Regents; decision becomes final</td>
+          <td>Penalty is recorded with the decision. An <code class="kw">ESCALATED</code> case status exists in the data model for a future appeal state, but no screen or route ever sets it yet</td>
+          <td><span class="status-pill status-gap">Not built</span></td>
+        </tr>
+        <tr>
+          <td class="step">STEP 5</td>
+          <td>Case Closed</td>
+          <td>Case reaches <code class="kw">RESOLVED</code> or <code class="kw">DISMISSED</code> — a permanent, timestamped end state with a full audit trail</td>
+          <td><span class="status-pill status-built">Built</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="gap-note">
+    <strong class="lbl">How to handle the two gaps in your defense</strong>
+    Both are honest scope calls, not oversights — worth saying so directly if asked. Oral-complaint
+    intake needs a distinct Secretariat-side form the current build doesn't have. The BOR appeal
+    is a second, separate adjudication cycle (its own review and decision) — the data model already
+    reserves a status for it (<code class="kw">ESCALATED</code>), which is exactly the kind of thing
+    to point to as "designed for, not yet wired up" rather than "missing."
+  </div>
+
+  <h2 class="section-title">Five scenarios, one procedure</h2>
+  <div class="scenario-grid">
+    <a href="#s1" class="scenario-card">
+      <span class="num">SCENARIO 1</span>
+      <span class="title">The full path — Formal Investigation</span>
+      <span class="desc">Filing through hearings, required minutes, recommendation, and a Liable outcome. Run this one live, start to finish.</span>
+      <span class="foot"><span class="tag">Live</span><span class="tag">~13 min</span></span>
+    </a>
+    <a href="#s2" class="scenario-card">
+      <span class="num">SCENARIO 2</span>
+      <span class="title">No prima facie case</span>
+      <span class="desc">Same intake, but the Committee finds no basis to proceed — dismissed at Step 3.</span>
+      <span class="foot"><span class="tag">Live delta</span><span class="tag">~1 min</span></span>
+    </a>
+    <a href="#s3" class="scenario-card">
+      <span class="num">SCENARIO 3</span>
+      <span class="title">Position Papers, Not Liable</span>
+      <span class="desc">The lighter, documents-only pathway from Step 4B, ending in acquittal instead of a hearing.</span>
+      <span class="foot"><span class="tag">Live delta</span><span class="tag">~3 min</span></span>
+    </a>
+    <a href="#s4" class="scenario-card">
+      <span class="num">SCENARIO 4</span>
+      <span class="title">Non-compliance dismissal</span>
+      <span class="desc">The notarization window lapses before Step 1 ever completes — the Committee dismisses automatically.</span>
+      <span class="foot"><span class="tag">Pre-staged</span><span class="tag">~1 min</span></span>
+    </a>
+    <a href="#s5" class="scenario-card">
+      <span class="num">SCENARIO 5</span>
+      <span class="title">Respondent never answers</span>
+      <span class="desc">Step 2's "opportunity to respond" lapses — the Secretariat proceeds without it instead of stalling.</span>
+      <span class="foot"><span class="tag">Pre-staged</span><span class="tag">~1 min</span></span>
+    </a>
+  </div>
+
+  <div class="divider"><span>Before you start</span><div class="line"></div></div>
+  <section class="prep">
+    <h2>Setup checklist</h2>
+    <div class="prep-grid">
+      <ul class="check-list">
+        <li>Both dev servers running — <code class="kw">npm run dev</code> in <code class="kw">server/</code> and <code class="kw">client/</code></li>
+        <li>Browser open to <span class="meta-value mono" style="font-size:12.5px;">localhost:5173/login</span></li>
+        <li>Data reset to a clean state (<code class="kw">node prisma/wipe.js &amp;&amp; node prisma/seed.js</code>)</li>
+        <li>Scenarios 4 and 5 need cases with an already-overdue deadline — ask me to pre-stage those in the database before you present, since waiting 3–5 real days isn't practical live</li>
+        <li>Know where the profile menu is: top-right corner → your name → <em>Log out</em></li>
+      </ul>
+      <table class="cred-table">
+        <thead><tr><th>Role</th><th>Email</th></tr></thead>
+        <tbody>
+          <tr><td class="role">Complainant</td><td>complainant@bulsu.edu.ph</td></tr>
+          <tr><td class="role">Respondent</td><td>respondent@bulsu.edu.ph</td></tr>
+          <tr><td class="role">Secretariat</td><td>secretariat@bulsu.edu.ph</td></tr>
+          <tr><td class="role">Chairperson</td><td>chair@bulsu.edu.ph</td></tr>
+          <tr><td class="role">Committee</td><td>committee1@bulsu.edu.ph</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="divider" id="s1"><span>Scenario 1 — the full path</span><div class="line"></div></div>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.1</span>
+      <h3 class="phase-title">File the complaint</h3>
+      <span class="paper-badge">PAPER STEP 1.A</span>
+      <span class="role-badge role-COMPLAINANT">Complainant</span>
+    </div>
+    <ol class="do-list">
+      <li>Log in as the Complainant, open <code class="kw">File a Complaint</code>.</li>
+      <li>Fill in the respondent's name, department, and student/personnel type; write a short incident description.</li>
+      <li>Upload the notarized complaint document, then submit.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>This is Step 1.A of the flowchart — a signed, notarized written complaint, filed straight through the Secretariat's system. The complainant has a 3-day window to get it notarized, which is exactly what Scenario 4 tests later.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.2</span>
+      <h3 class="phase-title">Verify, then Show-Cause: draft and approve</h3>
+      <span class="paper-badge">PAPER STEP 2</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+      <span class="role-badge role-CHAIRPERSON">Chairperson</span>
+    </div>
+    <ol class="do-list">
+      <li>Log in as Secretariat, open the case, confirm notarization, click <code class="kw">Verify</code>.</li>
+      <li>Draft the show-cause order (a line or two of charge details).</li>
+      <li>Log out, log in as the Chairperson, open the case, click <code class="kw">Approve</code>.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>This covers "submission to CODI" and "respondent notified" from Step 2 — and it's a genuine two-person control: the Secretariat drafts, the Chairperson has to sign off before the Respondent ever sees it. They can also return it for revision instead.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.3</span>
+      <h3 class="phase-title">Respondent's opportunity to respond</h3>
+      <span class="paper-badge">PAPER STEP 2</span>
+      <span class="role-badge role-RESPONDENT">Respondent</span>
+    </div>
+    <ol class="do-list">
+      <li>Log out, log in as the Respondent, open the case, submit a short answer.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>That's the "opportunity to respond" the flowchart calls for. Scenario 5, later, tests what happens if they don't take it.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.4</span>
+      <h3 class="phase-title">Prima facie evaluation + risk score</h3>
+      <span class="paper-badge">PAPER STEP 3</span>
+      <span class="role-badge role-COMMITTEE">Committee</span>
+    </div>
+    <ol class="do-list">
+      <li>Log out, log in as a Committee member, open the case.</li>
+      <li>Evaluate for prima facie — mark it <code class="kw">Found</code>, with a short rationale.</li>
+      <li>Run the risk assessment and point out the classification it produces.</li>
+    </ol>
+    <div class="branch"><strong class="lbl">Branch point</strong>This is the fork the flowchart draws at Step 3. Marking it <code class="kw">Found</code> continues below into the formal charge. Marking it <code class="kw">Not Found</code> instead is Scenario 2 — the case goes straight to Dismissed.</div>
+    <div class="say"><strong class="lbl">Say</strong>The risk score is decision support, not a verdict — it flags severity for the Committee, who can override it with their own judgment.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.5</span>
+      <h3 class="phase-title">Formal charge, then pathway choice</h3>
+      <span class="paper-badge">PAPER STEPS 3 &amp; 4</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+      <span class="role-badge role-RESPONDENT">Respondent</span>
+      <span class="role-badge role-COMPLAINANT">Complainant</span>
+    </div>
+    <ol class="do-list">
+      <li>As Secretariat, issue the formal charge — this is "Issuance of Formal Charge" from the diagram.</li>
+      <li>As Respondent, submit the formal answer, then choose <code class="kw">Formal Investigation</code> as the pathway.</li>
+      <li>As Complainant, also choose <code class="kw">Formal Investigation</code>.</li>
+    </ol>
+    <div class="branch"><strong class="lbl">Branch point</strong>Both sides choose independently — agree, and it locks in immediately; disagree, and the Secretariat has the final call. Choosing <code class="kw">Position Papers</code> here instead is Scenario 3.</div>
+    <div class="say"><strong class="lbl">Say</strong>This is exactly the fork the flowchart names at Step 4 — Pathway A, a full evidentiary hearing, or Pathway B, a documents-only review. The system doesn't let one party force it on the other.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.6</span>
+      <h3 class="phase-title">Formal Investigation — hearings with required minutes</h3>
+      <span class="paper-badge">PAPER STEP 4 · PATHWAY A</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+    </div>
+    <ol class="do-list">
+      <li>Schedule the Pre-Trial hearing.</li>
+      <li>Try <code class="kw">End Formal Investigation</code> right away — point out it's blocked.</li>
+      <li>Attach the Pre-Trial minutes, schedule a Trial hearing, attach its minutes too.</li>
+      <li><code class="kw">End Formal Investigation</code> now goes through.</li>
+    </ol>
+    <div class="guard"><strong class="lbl">Why step 2 matters</strong>This is a real server rule, not a UI hint — the API itself refuses to end the investigation until every hearing has its minutes on file. That's the "full evidentiary hearing" language from the paper, enforced, not just described.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.7</span>
+      <h3 class="phase-title">Recommendation, then the President's Decision</h3>
+      <span class="paper-badge">PAPER STEP 5</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+    </div>
+    <ol class="do-list">
+      <li>Attach the recommendation document, click <code class="kw">File recommendation</code> — status changes to <code class="kw">Recommendation Filed</code>.</li>
+      <li>Click <code class="kw">Record outcome</code>, choose <code class="kw">Liable</code>, write a rationale and a penalty, submit.</li>
+      <li>Show the case land on <code class="kw">Resolved</code>.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>These are two separate steps on purpose — "CODI Report and Recommendation" and "President's Decision" are two different moments in the paper's own diagram, not one action. The recommendation goes out, and the outcome genuinely comes back later from the University President's office.</div>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">1.8</span>
+      <h3 class="phase-title">Case Closed — the paper trail</h3>
+      <span class="paper-badge">PAPER STEP 5</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+    </div>
+    <ol class="do-list">
+      <li>Scroll to the case timeline and walk through the full history, start to finish.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>Every action on this case — filing to resolution — is logged with who did it and when. That's the audit trail behind "Case Closed."</div>
+  </section>
+
+  <div class="divider" id="s2"><span>Scenario 2 — no prima facie case</span><div class="line"></div></div>
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">2</span>
+      <h3 class="phase-title">Dismissed at the evaluation stage</h3>
+      <span class="paper-badge">PAPER STEP 3</span>
+      <span class="role-badge role-COMMITTEE">Committee</span>
+      <span class="stage-tag pre">needs a second case</span>
+    </div>
+    <ol class="do-list">
+      <li>Repeat Phases 1.1–1.3 on a fresh case (or use a second, pre-staged one already at that stage).</li>
+      <li>At the prima facie evaluation, mark it <code class="kw">Not Found</code> with a rationale instead.</li>
+      <li>Show the status land on <code class="kw">Dismissed</code> — no case number was ever assigned, since the paper's flowchart treats prima facie as the point a complaint becomes an official case.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>Not every complaint becomes a docketed case — the flowchart is explicit that a lack of merit ends things here, and the system reflects that: an undocketed case never gets a case number, only its filing reference.</div>
+  </section>
+
+  <div class="divider" id="s3"><span>Scenario 3 — position papers, not liable</span><div class="line"></div></div>
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">3</span>
+      <h3 class="phase-title">The lighter pathway, ending in acquittal</h3>
+      <span class="paper-badge">PAPER STEP 4 · PATHWAY B &amp; STEP 5</span>
+      <span class="role-badge role-RESPONDENT">Respondent</span>
+      <span class="role-badge role-COMPLAINANT">Complainant</span>
+      <span class="role-badge role-COMMITTEE">Committee</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+      <span class="stage-tag pre">needs a second case</span>
+    </div>
+    <ol class="do-list">
+      <li>Repeat through Phase 1.5 on a fresh (or pre-staged) case, but at the pathway choice, both parties pick <code class="kw">Position Papers</code> instead.</li>
+      <li>As Respondent, then Complainant, each upload a position paper.</li>
+      <li>As Committee (or Secretariat), attach the CODI report and record the deliberation's recommendation.</li>
+      <li>As Secretariat, record the decision as <code class="kw">Not Liable</code>, with a rationale.</li>
+      <li>Show the case land on <code class="kw">Dismissed</code> — cleared, no hearing required.</li>
+    </ol>
+    <div class="say"><strong class="lbl">Say</strong>This is Pathway B — written arguments and supporting documents, no oral hearing. Same procedure, same outcome categories, lighter process, and it can end in acquittal just as validly as Pathway A.</div>
+  </section>
+
+  <div class="divider" id="s4"><span>Scenario 4 — non-compliance dismissal</span><div class="line"></div></div>
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">4</span>
+      <h3 class="phase-title">The notarization window lapses</h3>
+      <span class="paper-badge">PAPER STEP 1.A</span>
+      <span class="role-badge role-COMMITTEE">Committee</span>
+      <span class="stage-tag pre">pre-staged — time-based rule</span>
+    </div>
+    <ol class="do-list">
+      <li>Open the pre-staged case whose 3-day notarization deadline has already passed with no notarized document on file.</li>
+      <li>As a Committee member, click <code class="kw">Dismiss for Non-Compliance</code>.</li>
+      <li>Show the case land on <code class="kw">Dismissed</code> automatically.</li>
+    </ol>
+    <div class="guard"><strong class="lbl">Why this is pre-staged</strong>The 3-day window is real elapsed time, not something to wait out live — ask me beforehand to seed a case in the local database with that deadline already overdue, so it's just sitting there ready to click.</div>
+    <div class="say"><strong class="lbl">Say</strong>Step 1.A requires the complaint to be notarized — this is that requirement with teeth: miss the window, and the case doesn't quietly sit there forever, the Committee can close it out.</div>
+  </section>
+
+  <div class="divider" id="s5"><span>Scenario 5 — respondent never answers</span><div class="line"></div></div>
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">5</span>
+      <h3 class="phase-title">Secretariat proceeds without a response</h3>
+      <span class="paper-badge">PAPER STEP 2</span>
+      <span class="role-badge role-SECRETARIAT">Secretariat</span>
+      <span class="stage-tag pre">pre-staged — time-based rule</span>
+    </div>
+    <ol class="do-list">
+      <li>Open the pre-staged case whose 5-day answer window has already lapsed with no answer filed.</li>
+      <li>As Secretariat, click <code class="kw">Proceed Without Response</code>.</li>
+      <li>Continue into the Committee's prima facie evaluation exactly as in Scenario 1 — the process doesn't stall just because one side went quiet.</li>
+    </ol>
+    <div class="guard"><strong class="lbl">Why this is pre-staged</strong>Same reasoning as Scenario 4 — a 5-day window is real elapsed time. Ask me to seed this one too before you present.</div>
+    <div class="say"><strong class="lbl">Say</strong>The flowchart calls this "opportunity to respond" — it's an opportunity, not a veto. If the Respondent doesn't use it, the case still moves forward on schedule.</div>
+  </section>
+
+  <div class="divider"><span>Wrap-up</span><div class="line"></div></div>
+  <section class="closing">
+    <h2>Closing line</h2>
+    <p>
+      "That's five scenarios covering every branch in our procedure's own flowchart — both intake
+      outcomes at Step 3, both pathways at Step 4, and both edge cases the paper implies but doesn't
+      spell out: what happens when a deadline is missed instead of a decision being made. The two
+      gaps we're upfront about — oral intake and the Board of Regents appeal — are scoped as future
+      work, not oversights; the appeal state is already reserved in the data model for exactly that."
+    </p>
+    <p>Every rule demonstrated — the notarization window, the two-person show-cause approval, the required hearing minutes, the two-stage recommendation — is enforced server-side, not just hinted at in the interface.</p>
+  </section>
+</div>

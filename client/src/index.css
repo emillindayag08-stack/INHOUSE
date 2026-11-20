@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Typography: Inter throughout. Headings are bold, sub-headings medium, body
+   regular. Tracking and line height are set once here; the text-* size
+   utilities carry their own matching line heights. */
+@layer base {
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2 {
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  h3,
+  h4 {
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    letter-spacing: inherit;
+  }
+}

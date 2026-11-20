@@ -1,0 +1,935 @@
+// CODI-IS golden-path schema
+// Covers: complaint intake -> verification -> show-cause -> respondent answer ->
+// prima facie evaluation -> formal charge -> hearing -> deliberation -> decision,
+// plus deadline tracking, notifications, and audit logging.
+//
+// Deferred for a later pass (per project scoping): DSS risk-scoring cues,
+// referral coordination, position papers as a distinct entity (folded into
+// Deliberation notes for now).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// What kind of account this is — NOT which side of a case someone is on.
+// Complainant/respondent is a property of each Case (see partySide() in
+// services/caseAccess.js), so the same university member can file one
+// complaint and answer another.
+enum RoleName {
+  PARTY // a university member from the BulSU directory (student or personnel)
+  SECRETARIAT
+  CHAIRPERSON
+  COMMITTEE
+  // The University President: approves the formal charge CODI drafts, and
+  // decides the case's outcome. Deliberately not CODI staff — they see a case
+  // only once a charge draft has been sent to them (services/caseAccess.js).
+  DISCIPLINING_AUTHORITY
+}
+
+// The Section 12 (2025 RACCS) condition an anonymous complaint is filed under.
+// Any one is enough for it to be entertained.
+enum AnonymousGround {
+  PUBLIC_KNOWLEDGE
+  VERIFIABLE
+  DOCUMENTARY_EVIDENCE
+  AGENCY_REFERRAL
+}
+
+// How a dismissed case was closed. Only a case dismissed WITHOUT prejudice can
+// be reopened; one dismissed WITH prejudice is final.
+enum DismissalType {
+  WITH_PREJUDICE
+  WITHOUT_PREJUDICE
+}
+
+enum RespondentType {
+  STUDENT
+  PERSONNEL
+}
+
+enum GoverningFramework {
+  GBSH_CODE
+  RACCS
+}
+
+enum OffenseClassification {
+  LIGHT
+  LESS_GRAVE
+  GRAVE
+}
+
+// After the formal charge is sent, the case proceeds under one of two
+// pathways: a full Formal Investigation (hearing, then deliberation) or a
+// Position Paper track (written submissions only, straight to deliberation).
+enum InvestigationPathway {
+  FORMAL_INVESTIGATION
+  POSITION_PAPER
+}
+
+// The first hearing scheduled for a case is always the Pre-Trial; every
+// hearing after that is a Trial, repeated as many times as needed (see
+// POST /:id/hearings, which computes this server-side from the existing
+// hearing count rather than trusting client input).
+enum HearingType {
+  PRE_TRIAL
+  TRIAL
+}
+
+enum CaseStatus {
+  SUBMITTED
+  RETURNED_FOR_CORRECTION
+  VERIFIED
+  // A drafted order the Chairperson sends back keeps this status: it still
+  // has to be approved, the Secretariat just has to revise it first. The
+  // order's own status (ShowCauseOrder.status) is what records the return.
+  SHOW_CAUSE_PENDING_APPROVAL
+  // The Chairperson has approved the order, but the Secretariat has not yet
+  // served it. The respondent is still not told of the case at this point —
+  // service is what starts their response window (see documentsShared() in
+  // services/caseAccess.js).
+  SHOW_CAUSE_APPROVED
+  SHOW_CAUSE_ISSUED
+  // The respondent has filed their notarized response and the case is on hold
+  // with the Secretariat: they confirm the document is notarized and then
+  // approve the response (POST /:id/answer/approve), which is what moves the
+  // case on. Nothing downstream — the Committee meeting, the prima facie vote
+  // — may run while the case sits here.
+  ANSWER_UNDER_REVIEW
+  ANSWER_SUBMITTED
+  UNDER_EVALUATION
+  PRIMA_FACIE_FOUND
+  // The Secretariat has sent the drafted charge to the Disciplining Authority.
+  // It becomes FORMAL_CHARGE_ISSUED when the signed copy is uploaded, and
+  // falls back to PRIMA_FACIE_FOUND if the Authority sends the draft back.
+  FORMAL_CHARGE_PENDING_APPROVAL
+  PRIMA_FACIE_NOT_FOUND
+  FORMAL_CHARGE_ISSUED
+  HEARING_SCHEDULED
+  // Formal Investigation pathway only: the Secretariat has ended the
+  // hearing phase (POST /:id/end-formal-investigation) and now files the
+  // recommendation (POST /:id/investigation-recommendation, once the
+  // RECOMMENDATION document is attached), which moves the case to DECIDED —
+  // bypassing DELIBERATION entirely, that status stays exclusive to the
+  // Position Paper pathway's Committee-authored deliberation flow.
+  FORMAL_INVESTIGATION_ENDED
+  DELIBERATION
+  // Formal Investigation pathway only: the recommendation has been filed and
+  // forwarded; the case awaits the outcome from the external deciding body
+  // (POST /:id/investigation-outcome). Position Paper never sets this.
+  DECIDED
+  DISMISSED
+  RESOLVED
+  ESCALATED
+}
+
+enum DeadlineStatus {
+  PENDING
+  MET
+  OVERDUE
+}
+
+// The University President's final adjudication, logged by the Secretariat
+// since the President has no system access (see POST /:id/decision).
+enum DecisionOutcome {
+  LIABLE
+  NOT_LIABLE
+}
+
+enum DocumentType {
+  COMPLAINT
+  EVIDENCE
+  // The respondent's notarized answer to the formal charge.
+  RESPONDENT_ANSWER
+  // The respondent's notarized response to the show-cause order. Its own type
+  // rather than a second RESPONDENT_ANSWER: the two stages each keep one
+  // document, and a new upload at one stage must not replace the other's.
+  SHOW_CAUSE_ANSWER
+  DELIBERATION_NOTES
+  DECISION
+  OTHER
+  POSITION_PAPER
+  // The Secretariat's final attachment under the Formal Investigation
+  // pathway — attached via POST /:caseId/documents before the Liable/Not
+  // Liable outcome is recorded via POST /:id/investigation-outcome.
+  RECOMMENDATION
+  // The Secretariat's minutes for a specific hearing (Pre-Trial or Trial) —
+  // linked via Document.hearingId, one per hearing.
+  HEARING_MINUTES
+  // The signed formal charge the University President sends to the respondent
+  // physically. Attached by the Secretariat while the case is still
+  // PRIMA_FACIE_FOUND, then POST /:id/formal-charge records that it was sent.
+  FORMAL_CHARGE
+  // The show-cause order itself. The Secretariat downloads the generated
+  // template as Word, edits and signs it outside the app, then attaches it
+  // while the case is still VERIFIED — POST /:id/show-cause won't send the
+  // order to the Chairperson until the file is on record.
+  SHOW_CAUSE_ORDER
+}
+
+// Where a submitted document stands with the Secretariat. A document is not
+// part of the case record until it is APPROVED: while PENDING it is visible
+// only to the person who filed it and to CODI, and RETURNED means the
+// Secretariat sent it back with a note saying what to fix. Only the
+// Secretariat moves a document out of PENDING.
+enum DocumentReviewStatus {
+  PENDING
+  APPROVED
+  RETURNED
+}
+
+// The Secretariat drafts a show-cause order and sends it to the Chairperson,
+// who approves it or returns it for revision. Approval alone does not reach
+// the respondent: the order goes back to the Secretariat, who serves it, and
+// service is what puts it in force and starts the response-deadline clock.
+// Where a drafted formal charge stands with the Disciplining Authority.
+enum FormalChargeStatus {
+  PENDING_APPROVAL
+  APPROVED
+  RETURNED
+}
+
+enum ShowCauseOrderStatus {
+  PENDING_APPROVAL
+  // Approved by the Chairperson and back with the Secretariat, who serves it.
+  APPROVED
+  // Served on the respondent by the Secretariat; only now is it in force.
+  SERVED
+  RETURNED
+}
+
+// A round of up to 5 candidate meeting slots the Secretariat proposes for a
+// case. Only one round per case may be PROPOSED at a time — proposing a new
+// round supersedes the previous one. FINALIZED rounds are kept as permanent
+// history even if a later round reschedules the meeting.
+// What a round of candidate slots is for. The Committee and Chairperson mark
+// availability the same way either way; only what a confirmed slot produces
+// differs — a meeting is just announced, a hearing becomes a Hearing row.
+enum SchedulingPurpose {
+  COMMITTEE_MEETING
+  HEARING
+}
+
+enum SchedulingRoundStatus {
+  PROPOSED
+  FINALIZED
+  SUPERSEDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  loginAttempts LoginAttempt[]
+  mfaChallenges  MfaChallenge[]
+  trustedDevices TrustedDevice[]
+  documentsDisposalApproved Document[] @relation("DocumentDisposalApprovedBy")
+  respondentRows          CaseRespondent[] @relation("CaseRespondentUser")
+  respondentRowsConfirmed CaseRespondent[] @relation("CaseRespondentConfirmedBy")
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         RoleName
+  department   String?
+  // Student vs Faculty/Personnel, mirrored from the BulSU directory record.
+  userType     RespondentType?
+  // The person's stable key in the BulSU directory (student number or employee
+  // number) — see services/directory. Null on CODI staff accounts, which are
+  // appointments rather than directory entries. Keeping it means the real API
+  // can re-sync a person without matching on names or email.
+  directoryId  String?  @unique
+  createdAt    DateTime @default(now())
+  // Plaintext temporary password, issued when a party can't sign in (see
+  // POST /cases/:id/reset-respondent-password). Cleared on first successful
+  // login. Deliberate prototype-only simplification that retires together with
+  // passwordHash once sign-in moves to the BulSU accounts API.
+  tempPassword String?
+  // Wrong passwords in a row. Three lock the account for an hour (see
+  // services/lockoutService.js); a correct password clears the count.
+  failedLoginCount Int       @default(0)
+  // A deactivated account cannot sign in or act, and its holder no longer counts
+  // as a member of the panel they sat on. Never deleted: what the person did
+  // stays attributed to them. The Secretariat can reactivate it.
+  deactivatedAt        DateTime?
+  deactivatedById      String?
+  deactivatedBy        User?     @relation("UserDeactivatedBy", fields: [deactivatedById], references: [id])
+  deactivatedAccounts  User[]    @relation("UserDeactivatedBy")
+  deactivationNote     String?
+  lockedUntil      DateTime?
+  // The code emailed when the account locks; entering it unlocks at once. Only
+  // a keyed hash is kept. It lasts as long as the lock and allows a few guesses.
+  unlockCodeHash      String?
+  unlockCodeExpiresAt DateTime?
+  unlockAttempts      Int       @default(0)
+
+  casesFiled        Case[]             @relation("ComplainantCases")
+  // Cases naming this person as the respondent. A university member can be the
+  // complainant on one case and the respondent on another, so both sides point
+  // at User and neither is a property of the account.
+  casesAgainst      Case[]             @relation("RespondentCases")
+  respondentConfirmations Case[]       @relation("RespondentConfirmedBy")
+  documentsUploaded Document[]
+  documentsArchived Document[]      @relation("DocumentArchivedBy")
+  showCauseOrders   ShowCauseOrder[]
+  showCauseReviews  ShowCauseOrder[]       @relation("ShowCauseReviewedBy")
+  showCauseServed   ShowCauseOrder[]       @relation("ShowCauseServedBy")
+  formalChargesReviewed FormalCharge[]     @relation("FormalChargeReviewedBy")
+  primaFacieEvals   PrimaFacieEvaluation[]
+  primaFacieVotes   PrimaFacieVote[]
+  formalCharges     FormalCharge[]
+  deliberations     Deliberation[]
+  decisions         Decision[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  respondentAnswers RespondentAnswer[] @relation("RespondentAnswers")
+  respondentAnswersReturned RespondentAnswer[] @relation("RespondentAnswersReturned")
+  schedulingRoundsProposed  SchedulingRound[] @relation("SchedulingRoundProposedBy")
+  schedulingRoundsFinalized SchedulingRound[] @relation("SchedulingRoundFinalizedBy")
+  slotVotes                 SlotVote[]
+  riskAssessments           RiskAssessment[] @relation("RiskAssessmentEvaluatedBy")
+  riskAssessmentOverrides   RiskAssessment[] @relation("RiskAssessmentOverriddenBy")
+  pathwayRecommendations    Case[]           @relation("PathwayRecommendedBy")
+  investigationStatusUpdates InvestigationStatusUpdate[]
+  hearingsScheduled Hearing[]
+}
+
+model Case {
+  id                 String                 @id @default(cuid())
+  // Assigned to every case at filing (see POST /cases). caseNumber is the
+  // official docket number, assigned only once the Committee finds a prima
+  // facie basis for the case (see POST /:id/prima-facie) — cases dismissed
+  // at or before that point keep only their reference number.
+  referenceNumber    String                 @unique
+  caseNumber         String?                @unique
+  // CPI-YYYY-NNNN, assigned when the Secretariat verifies the complaint. A case is
+  // numbered REF at filing, CPI once verified, and CODI once a prima facie case is
+  // found; each number is kept when the next one is assigned.
+  cpiNumber          String?                @unique
+  complainantId      String
+  complainant        User                   @relation("ComplainantCases", fields: [complainantId], references: [id])
+  // Both sides are ordinary user accounts; which side someone is on is a fact
+  // about this case, not about their account. Null until the Secretariat
+  // matches the person the complainant described to a directory account —
+  // a complaint can be filed against someone whose account nobody has
+  // identified yet (see POST /:id/confirm-respondent).
+  respondentId       String?
+  respondentUser     User?                  @relation("RespondentCases", fields: [respondentId], references: [id])
+  // Who the complainant says this is about, in their own words. Kept even
+  // after confirmation: it is what they alleged, and the Secretariat's match
+  // is a separate, attributable act.
+  claimedRespondentName    String?
+  claimedRespondentType    RespondentType?
+  claimedRespondentCollege String?
+  // The Secretariat's confirmation that respondentId is the right person.
+  // A complaint cannot be verified until this is set. Confirmation binds the
+  // account for CODI's own use — it does not hand the case to the respondent.
+  respondentConfirmedAt   DateTime?
+  respondentConfirmedById String?
+  respondentConfirmedBy   User?              @relation("RespondentConfirmedBy", fields: [respondentConfirmedById], references: [id])
+  // When the Secretariat served the show-cause order, which is the moment the
+  // case becomes the respondent's: before this it is not in their case list
+  // and they have no side on it (see services/caseAccess.js). Null while the
+  // case is still intake.
+  respondentAssignedAt    DateTime?
+  // The respondent's directory details as they stood when the case was filed.
+  // Snapshotted so a later change of college or status can't rewrite history —
+  // governingFramework was derived from the type at filing, and the reports
+  // group by both.
+  respondentTypeAtFiling    RespondentType?
+  respondentCollegeAtFiling String?
+  description        String
+  // Filed anonymously: the complainant's identity is shown to nobody but
+  // themselves (see maskAnonymousComplainant in services/caseView.js). No
+  // notarized copy is required, and the only proceeding is the respondent's
+  // position paper.
+  isAnonymous        Boolean                @default(false)
+  // An anonymous complaint's screening (services/anonymousGuard.js). The
+  // Section 12 conditions the filer says it meets (one or more), when and
+  // where the incident happened, and when they declared it truthful. Empty or
+  // null on named complaints.
+  anonymousGrounds   AnonymousGround[]
+  incidentDate       DateTime?
+  incidentPlace      String?
+  falseComplaintAckAt DateTime?
+  // Set when the Secretariat closes an anonymous complaint as not entertained
+  // under Section 12. Counts toward the filer's pause on anonymous filing;
+  // cleared if the case is reopened.
+  notEntertainedAt     DateTime?
+  notEntertainedReason String?
+  isPeerToPeer       Boolean                @default(false)
+  isFirstOffense     Boolean                @default(true)
+  governingFramework GoverningFramework
+  offenseClassification OffenseClassification?
+  status             CaseStatus             @default(SUBMITTED)
+  filedAt            DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  // Set only by prisma/demoCases.js, so its --remove can find exactly the rows
+  // it created without touching real ones.
+  isDemo             Boolean                @default(false)
+  // Set while the case is DISMISSED. The Secretariat chooses it when they
+  // dismiss; the Committee's non-compliance dismissal and a finding of no
+  // prima facie case or no liability are without prejudice.
+  dismissalType      DismissalType?
+  // Where the case stood when it closed, so reopening can return it there.
+  statusBeforeClose  CaseStatus?
+  reopenedAt         DateTime?
+  reopenCount        Int                    @default(0)
+
+  // Once the formal charge is sent, each party independently picks a
+  // pathway. If they agree, finalPathway is set automatically; if they
+  // differ, it stays null until the Secretariat's recommendation resolves it.
+  respondentPathwayChoice   InvestigationPathway?
+  complainantPathwayChoice  InvestigationPathway?
+  complainantPathwayChosenAt DateTime?
+  finalPathway              InvestigationPathway?
+  pathwayRecommendedById    String?
+  pathwayRecommendedBy      User?                 @relation("PathwayRecommendedBy", fields: [pathwayRecommendedById], references: [id])
+  pathwayRecommendedAt      DateTime?
+
+  // Everyone the complaint names (1 to 3). Position 0 is mirrored onto the
+  // respondent* columns above, which the rest of the code still reads.
+  respondents      CaseRespondent[]
+  documents        Document[]
+  showCauseOrders  ShowCauseOrder[]
+  respondentAnswers RespondentAnswer[]
+  primaFacieEvals  PrimaFacieEvaluation[]
+  primaFacieVotes  PrimaFacieVote[]
+  formalCharges    FormalCharge[]
+  hearings         Hearing[]
+  deliberations    Deliberation[]
+  decision         Decision?
+  deadlines        Deadline[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  schedulingRounds SchedulingRound[]
+  riskAssessments  RiskAssessment[]
+  investigationStatusUpdates InvestigationStatusUpdate[]
+}
+
+model Document {
+  id                 String             @id @default(cuid())
+  caseId             String
+  case               Case               @relation(fields: [caseId], references: [id])
+  uploadedById       String
+  uploadedBy         User               @relation(fields: [uploadedById], references: [id])
+  fileName           String
+  // Null on link-only evidence, where the material lives in the submitter's
+  // own cloud storage and only externalUrl is set. Exactly one of filePath /
+  // externalUrl is populated on any row.
+  filePath           String?
+  // An external link (Drive, OneDrive, etc.) standing in for an upload, so
+  // large evidence doesn't have to be pushed through — and stored by — this
+  // system. Evidence only.
+  externalUrl        String?
+  mimeType           String?
+  fileSize           Int?
+  docType            DocumentType
+  // Historical: filers used to declare "this is already notarized" at upload.
+  // The declaration was dropped — the Secretariat's review is what decides —
+  // so new rows leave this false.
+  claimedNotarized   Boolean              @default(false)
+  reviewStatus       DocumentReviewStatus @default(PENDING)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  // Why the Secretariat sent it back, shown to whoever filed it. Set only on
+  // RETURNED.
+  reviewNote         String?
+  uploadedAt         DateTime           @default(now())
+  // Which respondent this filing belongs to (a CaseRespondent id). Null on the
+  // complainant's and staff documents, and on filings made before a case could
+  // have several respondents.
+  respondentRowId    String?
+  // Pages in the stored file, and — when several files were joined into one
+  // PDF — the names they were uploaded under, one per line. What the Secretariat
+  // sees when reviewing, since the originals are not kept separately.
+  pageCount          Int?
+  sourceFileNames    String?
+  // Set only on EVIDENCE uploads submitted in response to a Secretariat
+  // note on a specific Formal Investigation hearing (see Hearing below).
+  hearingId          String?
+  hearing            Hearing?           @relation(fields: [hearingId], references: [id])
+  // Set once this document has been submitted as a show-cause order draft.
+  // While null, a SHOW_CAUSE_ORDER document is still a working attachment the
+  // Secretariat may replace or remove. A case holds one order document at a
+  // time, so this points at the current attempt, never at a superseded one.
+  showCauseOrder     ShowCauseOrder?
+  // Set once this document has been sent up as a formal charge draft. See
+  // FormalCharge.documentId.
+  formalCharge       FormalCharge?
+
+  // --- Replaced, but kept -------------------------------------------------
+  // Set when a newer upload took this one's place. The row and its file stay
+  // on record. CASE_DETAIL_INCLUDE filters these out, so a case only ever
+  // shows current documents — a dozen call sites do .find(d => d.docType ===
+  // "X") and would otherwise pick up a superseded file.
+  supersededAt       DateTime?
+  supersededById     String?            @unique
+  supersededBy       Document?          @relation("DocumentVersions", fields: [supersededById], references: [id])
+  previousVersion    Document?          @relation("DocumentVersions")
+
+  // --- Archived, never deleted --------------------------------------------
+  // Withdrawing a document hides it from the case instead of destroying it.
+  // One-way: there is no route back, and the reason is required.
+  archivedAt         DateTime?
+  archivedById       String?
+  archivedBy         User?              @relation("DocumentArchivedBy", fields: [archivedById], references: [id])
+  archiveReason      String?
+  // Retention: a file may be disposed of only after the retention period, and
+  // only on the Secretariat's explicit approval. Approving it records who and
+  // why, archives the file, and writes the audit log — nothing is deleted.
+  disposalApprovedAt   DateTime?
+  disposalApprovedById String?
+  disposalApprovedBy   User?     @relation("DocumentDisposalApprovedBy", fields: [disposalApprovedById], references: [id])
+  disposalNote         String?
+
+  // The Records page lists every file across cases and filters on these.
+  @@index([docType])
+  @@index([archivedAt])
+  @@index([disposalApprovedAt])
+  @@index([uploadedAt])
+}
+
+model ShowCauseOrder {
+  id               String               @id @default(cuid())
+  caseId           String
+  case             Case                 @relation(fields: [caseId], references: [id])
+  issuedById       String // Secretariat member who drafted and sent this order
+  issuedBy         User                 @relation(fields: [issuedById], references: [id])
+  // Legacy free-text transcription. The order is now attached as a
+  // SHOW_CAUSE_ORDER document instead, so new rows leave this null — it stays
+  // only so orders drafted before that change still render.
+  content          String?
+  // The signed order file. A case carries only one at a time: attaching a
+  // revision replaces it, and this is nulled on the attempt it belonged to, so
+  // a returned attempt keeps its status and note but not the superseded file.
+  documentId       String?              @unique
+  document         Document?            @relation(fields: [documentId], references: [id])
+  status           ShowCauseOrderStatus @default(PENDING_APPROVAL)
+  issuedAt         DateTime             @default(now()) // when drafted & sent to the Chairperson
+  reviewedById     String? // Chairperson who approved or returned it
+  reviewedBy       User?                @relation("ShowCauseReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt       DateTime?
+  returnNote       String? // Chairperson's note when returned for revision
+  servedById       String? // Secretariat member who served the approved order
+  servedBy         User?                @relation("ShowCauseServedBy", fields: [servedById], references: [id])
+  servedAt         DateTime? // when the respondent was actually served
+  responseDeadline DateTime? // set only once served; starts the respondent's response window
+}
+
+model RespondentAnswer {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id])
+  // Legacy typed answer. Both stages now attach a notarized document
+  // instead — RESPONDENT_ANSWER for the formal charge, SHOW_CAUSE_ANSWER for
+  // the show-cause order — so new rows leave this null.
+  content     String?
+  // Which stage this answer was submitted for: "SHOW_CAUSE" (the original
+  // response to the show-cause order) or "FORMAL_CHARGE" (the formal written
+  // answer submitted after the formal charge is sent). Also written directly
+  // by the Secretariat (not the respondent) when they proceed without a
+  // response — see POST /:id/proceed-without-response.
+  stage       String   @default("SHOW_CAUSE")
+  // Who filed it. Usually the respondent, but the Secretariat writes one of
+  // these when proceeding without a response, so the timeline shouldn't
+  // attribute every answer to the respondent.
+  submittedById String?
+  submittedBy   User?  @relation("RespondentAnswers", fields: [submittedById], references: [id])
+  submittedAt DateTime @default(now())
+  // The Secretariat's return of a show-cause response, on either ground:
+  // "NOTARIZATION" (the copy could not be confirmed notarized) or "CONTENT"
+  // (it does not answer the order). Cleared when the respondent files a
+  // replacement, which is the re-filing itself. While set, the case stays at
+  // ANSWER_UNDER_REVIEW and cannot be approved.
+  returnedAt   DateTime?
+  // Which respondent filed it (a CaseRespondent id); null on the Secretariat's
+  // proceed-without-response record and on older rows.
+  respondentRowId String?
+  returnedById String?
+  returnedBy   User?    @relation("RespondentAnswersReturned", fields: [returnedById], references: [id])
+  returnReason String?
+  returnNote   String?
+}
+
+// One Committee member's vote on whether a prima facie case exists. Every
+// Committee member votes; the Secretariat then confirms the outcome, which is
+// what creates the official PrimaFacieEvaluation below and moves the case on.
+// Unique per (case, voter): re-voting updates the existing row rather than
+// stacking, so the tally always reflects each member once.
+model PrimaFacieVote {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id])
+  voterId   String
+  voter     User     @relation(fields: [voterId], references: [id])
+  // Null means the member abstained: neither for nor against, and excluded
+  // from the majority count and from needing a risk-assessment vote.
+  found     Boolean?
+  rationale String
+  votedAt   DateTime @default(now())
+  // Which respondent the vote is about (a CaseRespondent id): with several
+  // respondents each gets their own vote. Null only on rows from before that,
+  // which are read as the first respondent's.
+  respondentRowId String?
+
+  @@unique([caseId, voterId, respondentRowId])
+}
+
+// The official finding. evaluatedById is the Secretariat member who confirmed
+// the Committee's vote — the substantive judgment lives in PrimaFacieVote.
+model PrimaFacieEvaluation {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id])
+  evaluatedById String
+  evaluatedBy   User     @relation(fields: [evaluatedById], references: [id])
+  found         Boolean
+  rationale     String
+  evaluatedAt   DateTime @default(now())
+  // The respondent this finding is about (a CaseRespondent id).
+  respondentRowId String?
+}
+
+// A Committee member's offense-level vote (Light / Less Grave / Grave) for a
+// case, once a prima facie case has been found. The member may vote again at
+// any time; each is kept as permanent history rather than overwritten. The
+// score columns are only set on assessments recorded under the old
+// severity + frequency + evidence scoring.
+model RiskAssessment {
+  id             String                 @id @default(cuid())
+  caseId         String
+  case           Case                   @relation(fields: [caseId], references: [id])
+  evaluatedById  String
+  evaluatedBy    User                   @relation("RiskAssessmentEvaluatedBy", fields: [evaluatedById], references: [id])
+  severityScore  Int?
+  frequencyScore Int?
+  evidenceScore  Int?
+  totalScore     Int?
+  classification OffenseClassification
+  evaluatedAt    DateTime               @default(now())
+
+  // The Committee/Chairperson may override the system-suggested
+  // classification above with their own final decision. The original
+  // suggestion is never overwritten — both are kept so the UI can show
+  // "System suggested" vs "Committee decision" side by side.
+  overrideClassification OffenseClassification?
+  overrideJustification  String?
+  overriddenById         String?
+  overriddenBy           User?                  @relation("RiskAssessmentOverriddenBy", fields: [overriddenById], references: [id])
+  overriddenAt           DateTime?
+  // The respondent this assessment scores (a CaseRespondent id).
+  respondentRowId        String?
+}
+
+model FormalCharge {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id])
+  issuedById    String // Secretariat member who drafted and sent it
+  issuedBy      User     @relation(fields: [issuedById], references: [id])
+  // Legacy free-text particulars. The charge is now drafted outside the system
+  // and attached as a FORMAL_CHARGE document instead, so new rows leave this
+  // null — it stays only so charges recorded before that change still render.
+  chargeDetails String?
+  // The drafted charge file, pinned once it has been sent up for approval.
+  // While a FORMAL_CHARGE document is unpinned it is still a working copy the
+  // Secretariat may replace. A case carries one such document at a time — the
+  // signed copy replaces the draft — so this is nulled when its file goes.
+  documentId    String?   @unique
+  document      Document? @relation(fields: [documentId], references: [id])
+  issuedAt      DateTime @default(now())
+  status        FormalChargeStatus @default(PENDING_APPROVAL)
+  // The Disciplining Authority's review of the draft.
+  reviewedById  String?
+  reviewedBy    User?    @relation("FormalChargeReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  // Why it was sent back, shown to the Secretariat. Set only on RETURNED.
+  returnNote    String?
+}
+
+model Hearing {
+  id            String      @id @default(cuid())
+  caseId        String
+  case          Case        @relation(fields: [caseId], references: [id])
+  // Computed server-side from the case's existing hearing count — the
+  // first hearing is always PRE_TRIAL, every one after that is TRIAL.
+  type          HearingType @default(TRIAL)
+  scheduledAt   DateTime
+  mode          String      @default("In-person")
+  notes         String? // Secretariat's own scheduling notes
+  // Guidance for each party on what to submit after this hearing — set
+  // separately since the two sides are often asked for different things.
+  // See PATCH /:id/hearings/:hearingId/notes.
+  noteForComplainant String?
+  noteForRespondent  String?
+  // Whether the guidance note above requires that party to submit a
+  // document for this hearing — an explicit flag rather than inferring it
+  // from whether a note was left, since a note can be purely informational.
+  requiresDocFromComplainant Boolean @default(false)
+  requiresDocFromRespondent  Boolean @default(false)
+  scheduledById String?
+  scheduledBy   User?       @relation(fields: [scheduledById], references: [id])
+  createdAt     DateTime    @default(now())
+
+  // EVIDENCE documents either party submits in response to their note above.
+  documents Document[]
+  // Set when the hearing came out of a collab-calendar round rather than being
+  // scheduled outright.
+  schedulingRound SchedulingRound?
+}
+
+// A running log of Secretariat-recorded status updates on a case's Formal
+// Investigation (e.g. "Site visit conducted", "Awaiting witness statement").
+// Unlike most case actions this is repeatable — any number of entries may be
+// added as the investigation progresses.
+model InvestigationStatusUpdate {
+  id           String   @id @default(cuid())
+  caseId       String
+  case         Case     @relation(fields: [caseId], references: [id])
+  recordedById String
+  recordedBy   User     @relation(fields: [recordedById], references: [id])
+  note         String
+  recordedAt   DateTime @default(now())
+}
+
+// A Secretariat-proposed round of candidate meeting slots for a case's
+// committee/chairperson meeting. Committee + Chairperson users vote their
+// availability (multi-select) on the slots below, then the Secretariat
+// manually finalizes one.
+model SchedulingRound {
+  id              String                @id @default(cuid())
+  caseId          String
+  case            Case                  @relation(fields: [caseId], references: [id])
+  purpose         SchedulingPurpose     @default(COMMITTEE_MEETING)
+  // The hearing a finalized HEARING round produced. Null on meeting rounds and
+  // on any round still gathering availability.
+  hearingId       String?               @unique
+  hearing         Hearing?              @relation(fields: [hearingId], references: [id])
+  proposedById    String
+  proposedBy      User                  @relation("SchedulingRoundProposedBy", fields: [proposedById], references: [id])
+  status          SchedulingRoundStatus @default(PROPOSED)
+  finalizedSlotId String?               @unique
+  finalizedSlot   MeetingSlot?          @relation("FinalizedSlot", fields: [finalizedSlotId], references: [id])
+  finalizedById   String?
+  finalizedBy     User?                 @relation("SchedulingRoundFinalizedBy", fields: [finalizedById], references: [id])
+  finalizedAt     DateTime?
+  createdAt       DateTime              @default(now())
+
+  slots MeetingSlot[] @relation("RoundSlots")
+}
+
+// One candidate date/time within a SchedulingRound (up to 5 per round).
+model MeetingSlot {
+  id        String   @id @default(cuid())
+  roundId   String
+  round     SchedulingRound @relation("RoundSlots", fields: [roundId], references: [id])
+  startAt   DateTime
+  createdAt DateTime @default(now())
+
+  votes        SlotVote[]
+  finalizedFor SchedulingRound? @relation("FinalizedSlot")
+}
+
+// A Committee/Chairperson user marking themselves available for a given
+// slot. One row per (slot, voter) — casting new votes replaces a voter's
+// prior picks for that round rather than accumulating.
+model SlotVote {
+  id        String      @id @default(cuid())
+  slotId    String
+  slot      MeetingSlot @relation(fields: [slotId], references: [id])
+  voterId   String
+  voter     User        @relation(fields: [voterId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@unique([slotId, voterId])
+}
+
+model Deliberation {
+  id             String   @id @default(cuid())
+  caseId         String
+  case           Case     @relation(fields: [caseId], references: [id])
+  recordedById   String
+  recordedBy     User     @relation(fields: [recordedById], references: [id])
+  notes          String
+  recommendation String
+  recordedAt     DateTime @default(now())
+}
+
+model Decision {
+  id           String          @id @default(cuid())
+  caseId       String          @unique
+  case         Case            @relation(fields: [caseId], references: [id])
+  decidedById  String
+  decidedBy    User            @relation(fields: [decidedById], references: [id])
+  outcome      DecisionOutcome
+  penalty      String?
+  rationale    String
+  decidedAt    DateTime        @default(now())
+}
+
+model Deadline {
+  id          String         @id @default(cuid())
+  caseId      String
+  case        Case           @relation(fields: [caseId], references: [id])
+  stage       String
+  dueAt       DateTime
+  status      DeadlineStatus @default(PENDING)
+  completedAt DateTime?
+  // Whose deadline this is when a case has several respondents (a
+  // CaseRespondent id). Null means the case as a whole.
+  respondentRowId String?
+  // Set when the "deadline approaching" notice is sent, so it goes out once.
+  reminderSentAt DateTime?
+  createdAt   DateTime       @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  caseId    String?
+  case      Case?    @relation(fields: [caseId], references: [id])
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  caseId    String?
+  case      Case?    @relation(fields: [caseId], references: [id])
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+  // Set when the actor is the anonymous complainant of this entry's case: the
+  // Audit Log shows "Anonymous complainant" and never matches it by name.
+  actorHidden Boolean @default(false)
+
+  // The Audit Log page reads this table newest-first and filters it by actor,
+  // action, case and date (see routes/audit.routes.js). It only ever grows, so
+  // those four columns are indexed rather than scanned.
+  @@index([createdAt])
+  @@index([caseId])
+  @@index([userId])
+  @@index([action])
+}
+
+// Every sign-in try, successful or not. Kept apart from AuditLog because a
+// failed try is often by an email that matches no account, so there is no user
+// to attribute it to. Read by the Secretariat and Chairperson only.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  // What was typed, lower-cased. Not a User reference: it may match no account.
+  email     String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  success   Boolean
+  // Why a failed try failed: UNKNOWN_EMAIL or WRONG_PASSWORD. Null on success.
+  reason    String?
+  ipAddress String?
+  userAgent String?
+  // On a successful sign-in: the privacy-notice acknowledgment and the details
+  // the person gave before signing in — { noticeVersion, fullName, idNumber,
+  // affiliation, purpose, idMatches, acknowledgedAt }. See privacyNotice.js.
+  privacyAck Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([email])
+  @@index([success])
+}
+
+// One named respondent on a complaint. A case has one to three. The first
+// (position 0) is mirrored onto Case.respondentId / claimedRespondent* /
+// respondentConfirmed* so code written for a single respondent keeps working;
+// see services/respondentService.js. Everything a respondent does on their own
+// (answer, pathway choice, being served) is recorded here.
+model CaseRespondent {
+  id            String          @id @default(cuid())
+  caseId        String
+  case          Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  position      Int
+  // Null until the Secretariat matches the described person to an account.
+  userId        String?
+  user          User?           @relation("CaseRespondentUser", fields: [userId], references: [id])
+  // Who the complainant says this is, in their own words.
+  claimedName    String
+  claimedType    RespondentType
+  claimedCollege String
+  // Directory details when the case was filed (see Case.respondentTypeAtFiling).
+  typeAtFiling    RespondentType?
+  collegeAtFiling String?
+  confirmedAt   DateTime?
+  confirmedById String?
+  confirmedBy   User?           @relation("CaseRespondentConfirmedBy", fields: [confirmedById], references: [id])
+  // When the show-cause order was served on this respondent.
+  assignedAt    DateTime?
+  pathwayChoice InvestigationPathway?
+  // This respondent's own prima facie outcome once the Secretariat confirms it
+  // (null until then). `false` takes them out of everything after that stage.
+  primaFacieFound Boolean?
+  // Their offense level, from their own risk assessment (or its override).
+  offenseClassification OffenseClassification?
+  createdAt     DateTime        @default(now())
+
+  @@unique([caseId, position])
+  @@index([userId])
+}
+
+// A one-time sign-in code emailed to a staff member after their password. Only
+// a keyed hash of the code is stored. It expires, allows a few wrong guesses,
+// and works once.
+model MfaChallenge {
+  id         String    @id
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  ipAddress  String?
+  // The privacy acknowledgment given with the password, held until the code
+  // completes the sign-in and it is written onto the LoginAttempt.
+  privacyAck Json?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// A browser a staff member chose to trust for a few days after passing the
+// second step: sign-ins from it skip the code until it expires. Only a hash of
+// the device token is stored; the browser holds the token.
+model TrustedDevice {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  label      String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
+// A question in KODI, the FAQ bubble on every signed-in page. The Secretariat
+// edits them on the FAQs page, which saves the whole list at once, so
+// `position` is simply the order they were saved in. Sections have no table of
+// their own: a section is the run of entries that share its title.
+model FaqEntry {
+  id        String     @id @default(cuid())
+  section   String
+  question  String
+  // One paragraph per line.
+  answer    String
+  // Who sees it. Empty means everyone.
+  roles     RoleName[]
+  position  Int
+  updatedAt DateTime   @updatedAt
+
+  @@index([position])
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.bak
+*.env.bak
+*.log
+.DS_Store
+server/uploads/
+server/backups/
+ACCOUNTS.md
+CURRENT_ACCOUNTS.md

@@ -1,0 +1,680 @@
+<title>CODI-IS — Case Lifecycle (BPMN)</title>
+<style>
+  :root {
+    --paper: #F7F3F1;
+    --surface: #FFFFFF;
+    --ink: #241A1A;
+    --ink-soft: #6B5D5A;
+    --ink-faint: #97877F;
+    --line: #E4DBD8;
+    --maroon: #630505;
+    --maroon-dark: #4a0404;
+    --maroon-tint: rgba(99, 5, 5, 0.07);
+
+    --lane-complainant: #2F4A63;
+    --lane-complainant-tint: rgba(47, 74, 99, 0.08);
+    --lane-respondent: #256B62;
+    --lane-respondent-tint: rgba(37, 107, 98, 0.08);
+    --lane-secretariat: #630505;
+    --lane-secretariat-tint: rgba(99, 5, 5, 0.06);
+    --lane-chairperson: #8A6212;
+    --lane-chairperson-tint: rgba(138, 98, 18, 0.09);
+    --lane-committee: #5B3A73;
+    --lane-committee-tint: rgba(91, 58, 115, 0.08);
+
+    --resolved: #2F6B4A;
+    --resolved-tint: rgba(47, 107, 74, 0.14);
+    --dismissed: #7A6A63;
+    --dismissed-tint: rgba(122, 106, 99, 0.16);
+
+    --loop: #9A6B2E;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Roboto Mono", monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #191212;
+    --surface: #221A1A;
+    --ink: #F3EAE8;
+    --ink-soft: #C9B8B4;
+    --ink-faint: #8E7A75;
+    --line: #3A2C2A;
+    --maroon: #C4726B;
+    --maroon-dark: #E0938C;
+    --maroon-tint: rgba(196, 114, 107, 0.14);
+
+    --lane-complainant: #83A6CB;
+    --lane-complainant-tint: rgba(131, 166, 203, 0.12);
+    --lane-respondent: #6FC2B4;
+    --lane-respondent-tint: rgba(111, 194, 180, 0.12);
+    --lane-secretariat: #C4726B;
+    --lane-secretariat-tint: rgba(196, 114, 107, 0.13);
+    --lane-chairperson: #D1A24A;
+    --lane-chairperson-tint: rgba(209, 162, 74, 0.14);
+    --lane-committee: #B593D1;
+    --lane-committee-tint: rgba(181, 147, 209, 0.13);
+
+    --resolved: #6FC090;
+    --resolved-tint: rgba(111, 192, 144, 0.16);
+    --dismissed: #B3A29A;
+    --dismissed-tint: rgba(179, 162, 154, 0.18);
+
+    --loop: #D1A24A;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #191212;
+      --surface: #221A1A;
+      --ink: #F3EAE8;
+      --ink-soft: #C9B8B4;
+      --ink-faint: #8E7A75;
+      --line: #3A2C2A;
+      --maroon: #C4726B;
+      --maroon-dark: #E0938C;
+      --maroon-tint: rgba(196, 114, 107, 0.14);
+
+      --lane-complainant: #83A6CB;
+      --lane-complainant-tint: rgba(131, 166, 203, 0.12);
+      --lane-respondent: #6FC2B4;
+      --lane-respondent-tint: rgba(111, 194, 180, 0.12);
+      --lane-secretariat: #C4726B;
+      --lane-secretariat-tint: rgba(196, 114, 107, 0.13);
+      --lane-chairperson: #D1A24A;
+      --lane-chairperson-tint: rgba(209, 162, 74, 0.14);
+      --lane-committee: #B593D1;
+      --lane-committee-tint: rgba(181, 147, 209, 0.13);
+
+      --resolved: #6FC090;
+      --resolved-tint: rgba(111, 192, 144, 0.16);
+      --dismissed: #B3A29A;
+      --dismissed-tint: rgba(179, 162, 154, 0.18);
+
+      --loop: #D1A24A;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 32px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  header.top {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--maroon);
+    font-weight: 600;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .subtitle {
+    margin: 0;
+    max-width: 68ch;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  /* ---- Legend ---- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    row-gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    align-items: center;
+  }
+  .legend-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .legend-label { color: var(--ink-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .legend-shape { flex: none; }
+
+  /* ---- Diagram frame ---- */
+  .diagram-frame {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .diagram-frame-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+
+  .diagram-wrap {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .lane-rail {
+    flex: 0 0 152px;
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .lane-rail-spacer { height: var(--head-h); }
+  .lane-rail-item {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .lane-rail-item:last-child { border-bottom: none; }
+  .lane-rail-item::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--lane-color);
+  }
+  .lane-rail-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+
+  .diagram-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--paper);
+  }
+
+  svg text { font-family: var(--font-sans); fill: var(--ink); user-select: none; }
+  .node-sub { font-family: var(--font-mono); }
+
+  .annotation-box {
+    fill: var(--surface);
+    stroke: var(--ink-faint);
+    stroke-dasharray: 3 3;
+    stroke-width: 1.2;
+  }
+
+  /* ---- Footer notes ---- */
+  .footnotes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+    padding-top: 6px;
+  }
+  .footnote h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 700;
+  }
+  .footnote p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .footnote code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    background: var(--maroon-tint);
+    color: var(--maroon);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+</style>
+
+<div class="page">
+  <header class="top">
+    <span class="eyebrow">CODI-IS — Business Process Model</span>
+    <h1>Gender-Based Complaint Case Lifecycle</h1>
+    <p class="subtitle">
+      Every path a case can take through CODI-IS, from a complainant's initial filing to
+      resolution — under either the BulSU Anti-GBSH Code or RACCS 2025. Lanes are the five
+      system roles; the diagram follows exactly what each route in the codebase enforces,
+      including its status transitions, approval gateways, and the two final-stage pathways
+      (Position Paper vs. Formal Investigation).
+    </p>
+    <div class="legend">
+      <div class="legend-group">
+        <span class="legend-label">Shapes</span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--ink-soft)" stroke-width="1.6"/></svg>
+          Start
+        </span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="var(--resolved-tint)" stroke="var(--resolved)" stroke-width="2.4"/></svg>
+          End
+        </span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="18" height="14" viewBox="0 0 18 14"><rect x="1" y="1" width="16" height="12" rx="3" fill="none" stroke="var(--ink-soft)" stroke-width="1.6"/></svg>
+          Task
+        </span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="16" height="16" viewBox="0 0 16 16"><rect x="2.3" y="2.3" width="11.4" height="11.4" fill="none" stroke="var(--ink-soft)" stroke-width="1.6" transform="rotate(45 8 8)"/></svg>
+          Gateway
+        </span>
+      </div>
+      <div class="legend-group">
+        <span class="legend-label">Outcome</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:var(--resolved)"></span>Resolved</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:var(--dismissed)"></span>Dismissed</span>
+      </div>
+      <div class="legend-group">
+        <span class="legend-label">Flow</span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="26" height="10" viewBox="0 0 26 10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--ink-soft)" stroke-width="1.6"/><path d="M22 1 L26 5 L22 9 Z" fill="var(--ink-soft)"/></svg>
+          Sequence
+        </span>
+        <span class="legend-item">
+          <svg class="legend-shape" width="26" height="10" viewBox="0 0 26 10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--loop)" stroke-width="1.6" stroke-dasharray="3 2.5"/><path d="M22 1 L26 5 L22 9 Z" fill="var(--loop)"/></svg>
+          Sent back for revision
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="diagram-frame">
+    <div class="diagram-frame-head">
+      <span>codi-is.case-lifecycle.bpmn — 5 pools · scroll to follow the flow →</span>
+      <span id="dims"></span>
+    </div>
+    <div class="diagram-wrap">
+      <div class="lane-rail" id="laneRail"></div>
+      <div class="diagram-scroll">
+        <svg id="diagram" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnotes">
+    <div class="footnote">
+      <h3>Two ways a case closes early</h3>
+      <p>
+        If the notarized complaint isn't filed within its 3-day window, the Committee
+        dismisses for non-compliance. If the Committee finds no <code>prima facie</code>
+        case, it's dismissed there too — neither path ever reaches a formal charge.
+      </p>
+    </div>
+    <div class="footnote">
+      <h3>Who picks the pathway</h3>
+      <p>
+        Complainant and Respondent each choose independently. If they agree, it's final.
+        If they don't — or either stalls — the Secretariat sets or overrides the final
+        pathway at any point before it locks in.
+      </p>
+    </div>
+    <div class="footnote">
+      <h3>Formal Investigation stays Secretariat-heavy</h3>
+      <p>
+        Every hearing (Pre-Trial and Trial) now requires its own minutes on file before
+        the investigation can end. The final outcome is recorded once it comes back from
+        the University President's office — external to the system, no lane of its own.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var LANES = [
+    { id: "COMPLAINANT", name: "Complainant", varName: "--lane-complainant" },
+    { id: "RESPONDENT", name: "Respondent", varName: "--lane-respondent" },
+    { id: "SECRETARIAT", name: "CODI Secretariat", varName: "--lane-secretariat" },
+    { id: "CHAIRPERSON", name: "CODI Chairperson", varName: "--lane-chairperson" },
+    { id: "COMMITTEE", name: "CODI Committee", varName: "--lane-committee" },
+  ];
+
+  var COL_W = 172, LANE_H = 128, MARGIN_X = 46, TOP = 18, HEAD_H = 18;
+  var TASK_W = 148, TASK_H = 58, GATE_S = 52, EVT_R = 21;
+  // The Secretariat lane carries both post-split pathways in parallel (see
+  // the `dy` sub-row offsets on the Branch A / Branch B nodes below), so it
+  // gets extra height to hold two clear rows without collision.
+  var LANE_HEIGHTS = { COMPLAINANT: LANE_H, RESPONDENT: LANE_H, SECRETARIAT: 230, CHAIRPERSON: LANE_H, COMMITTEE: LANE_H };
+
+  function laneIndex(id) { return LANES.map(function (l) { return l.id; }).indexOf(id); }
+  function laneHeightOf(id) { return LANE_HEIGHTS[id] || LANE_H; }
+  function laneTop(id) {
+    var y = TOP;
+    for (var i = 0; i < laneIndex(id); i++) y += laneHeightOf(LANES[i].id);
+    return y;
+  }
+  function totalLanesHeight() {
+    return LANES.reduce(function (sum, l) { return sum + laneHeightOf(l.id); }, 0);
+  }
+  function nodeX(col) { return MARGIN_X + col * COL_W; }
+  function nodeY(n) { return laneTop(n.lane) + laneHeightOf(n.lane) / 2 + (n.dy || 0); }
+
+  // ---------------------------------------------------------------
+  // Nodes
+  // ---------------------------------------------------------------
+  var N = {
+    start: { lane: "COMPLAINANT", col: 0, type: "start", label: "Incident\noccurs" },
+    submit: { lane: "COMPLAINANT", col: 1.05, type: "task", label: "File complaint +\nnotarized document", sub: "SUBMITTED" },
+
+    gNotar: { lane: "SECRETARIAT", col: 2.15, type: "gateway", label: "Notarized\n≤ 3 days?" },
+    dismissNC: { lane: "COMMITTEE", col: 2.75, type: "task", label: "Dismiss for\nnon-compliance" },
+    endNC: { lane: "COMMITTEE", col: 3.85, type: "end", kind: "dismissed", label: "Case closed", sub: "DISMISSED" },
+
+    verify: { lane: "SECRETARIAT", col: 3.25, type: "task", label: "Verify\ncomplaint", sub: "VERIFIED" },
+    gValid: { lane: "SECRETARIAT", col: 4.35, type: "gateway", label: "Complete &\nvalid?" },
+
+    draftSC: { lane: "SECRETARIAT", col: 5.5, type: "task", label: "Draft show-cause\norder", sub: "SHOW_CAUSE_PENDING_APPROVAL" },
+    gApprove: { lane: "CHAIRPERSON", col: 6.6, type: "gateway", label: "Approve\ndraft?" },
+
+    answer: { lane: "RESPONDENT", col: 7.75, type: "task", label: "Submit answer", sub: "ANSWER_SUBMITTED" },
+    noResponse: { lane: "SECRETARIAT", col: 7.75, type: "task", label: "Proceed without\nresponse", sub: "5-day window lapsed" },
+
+    evalPF: { lane: "COMMITTEE", col: 8.9, type: "task", label: "Evaluate for\nprima facie", sub: "UNDER_EVALUATION" },
+    gPF: { lane: "COMMITTEE", col: 10.0, type: "gateway", label: "Prima facie\nfound?" },
+    endPF: { lane: "COMMITTEE", col: 11.1, type: "end", kind: "dismissed", label: "Case closed", sub: "DISMISSED — no prima facie" },
+
+    formalCharge: { lane: "SECRETARIAT", col: 11.1, type: "task", label: "Issue formal\ncharge", sub: "FORMAL_CHARGE_ISSUED · docketed" },
+
+    formalAnswer: { lane: "RESPONDENT", col: 12.2, type: "task", label: "Submit formal\nanswer" },
+    choosePathR: { lane: "RESPONDENT", col: 13.3, type: "task", label: "Choose pathway" },
+    choosePathC: { lane: "COMPLAINANT", col: 13.3, type: "task", label: "Choose pathway" },
+
+    gAgree: { lane: "SECRETARIAT", col: 14.4, type: "gateway", label: "Pathways\nagree?" },
+    setPathway: { lane: "SECRETARIAT", col: 14.4, dy: 60, type: "task", label: "Set / override\nfinal pathway" },
+    gSplit: { lane: "SECRETARIAT", col: 15.5, type: "gateway", label: "Final\npathway" },
+
+    // Branch A — Position Paper. From here on the Secretariat lane is split
+    // into two sub-rows (dy offsets) so the two pathways never collide while
+    // both run through it in parallel.
+    ppR: { lane: "RESPONDENT", col: 16.6, type: "task", label: "Submit position\npaper", sub: "POSITION_PAPER" },
+    ppC: { lane: "COMPLAINANT", col: 16.6, type: "task", label: "Submit position\npaper", sub: "POSITION_PAPER" },
+    codiReport: { lane: "COMMITTEE", col: 17.7, type: "task", label: "Attach CODI report +\nrecord deliberation", sub: "DELIBERATION" },
+    decision: { lane: "SECRETARIAT", col: 18.8, dy: -55, type: "task", label: "Record decision\n(Liable / Not Liable)" },
+    gOutcomeA: { lane: "SECRETARIAT", col: 19.9, dy: -55, type: "gateway", label: "Outcome?" },
+    endResolvedA: { lane: "SECRETARIAT", col: 21.0, dy: -27, type: "end", kind: "resolved", label: "Case resolved", sub: "RESOLVED" },
+    endDismissedA: { lane: "SECRETARIAT", col: 21.0, dy: -83, type: "end", kind: "dismissed", label: "Case closed", sub: "DISMISSED" },
+
+    // Branch B — Formal Investigation
+    hearingPT: { lane: "SECRETARIAT", col: 16.6, dy: 55, type: "task", label: "Schedule Pre-Trial\nhearing", sub: "HEARING_SCHEDULED" },
+    minutesPT: { lane: "SECRETARIAT", col: 17.7, dy: 55, type: "task", label: "Attach Pre-Trial\nminutes (required)" },
+    hearingTrial: { lane: "SECRETARIAT", col: 18.8, dy: 55, type: "task", label: "Schedule Trial hearing(s) +\nattach minutes (required)" },
+    endInvestigation: { lane: "SECRETARIAT", col: 19.9, dy: 55, type: "task", label: "End formal\ninvestigation", sub: "FORMAL_INVESTIGATION_ENDED" },
+    fileRec: { lane: "SECRETARIAT", col: 21.0, dy: 55, type: "task", label: "File\nrecommendation", sub: "DECIDED · filed & forwarded" },
+    recordOutcome: { lane: "SECRETARIAT", col: 22.1, dy: 55, type: "task", label: "Record outcome\n(from external body)" },
+    gOutcomeB: { lane: "SECRETARIAT", col: 23.2, dy: 55, type: "gateway", label: "Outcome?" },
+    endResolvedB: { lane: "SECRETARIAT", col: 24.3, dy: 27, type: "end", kind: "resolved", label: "Case resolved", sub: "RESOLVED" },
+    endDismissedB: { lane: "SECRETARIAT", col: 24.3, dy: 83, type: "end", kind: "dismissed", label: "Case closed", sub: "DISMISSED" },
+  };
+
+  // ---------------------------------------------------------------
+  // Edges: [from, to, opts]  opts: {label, kind: 'loop'}
+  // ---------------------------------------------------------------
+  var E = [
+    ["start", "submit"],
+    ["submit", "gNotar"],
+    ["gNotar", "dismissNC", { label: "No" }],
+    ["dismissNC", "endNC"],
+    ["gNotar", "verify", { label: "Yes" }],
+    ["verify", "gValid"],
+    ["gValid", "submit", { kind: "loop", label: "No — returned for correction" }],
+    ["gValid", "draftSC", { label: "Yes" }],
+    ["draftSC", "gApprove"],
+    ["gApprove", "draftSC", { kind: "loop", label: "No — returned for revision" }],
+    ["gApprove", "answer", { label: "Yes — order issued" }],
+    ["gApprove", "noResponse", { label: "window lapses" }],
+    ["answer", "evalPF"],
+    ["noResponse", "evalPF"],
+    ["evalPF", "gPF"],
+    ["gPF", "endPF", { label: "No" }],
+    ["gPF", "formalCharge", { label: "Yes" }],
+    ["formalCharge", "formalAnswer"],
+    ["formalCharge", "choosePathC"],
+    ["formalAnswer", "choosePathR"],
+    ["choosePathR", "gAgree"],
+    ["choosePathC", "gAgree"],
+    ["gAgree", "setPathway", { label: "No — differ" }],
+    ["setPathway", "gSplit"],
+    ["gAgree", "gSplit", { label: "Yes — auto-resolved" }],
+    ["gSplit", "ppR", { label: "Position Paper" }],
+    ["gSplit", "ppC"],
+    ["gSplit", "hearingPT", { label: "Formal Investigation" }],
+    ["ppR", "codiReport"],
+    ["ppC", "codiReport"],
+    ["codiReport", "decision"],
+    ["decision", "gOutcomeA"],
+    ["gOutcomeA", "endResolvedA", { label: "Liable" }],
+    ["gOutcomeA", "endDismissedA", { label: "Not Liable" }],
+    ["hearingPT", "minutesPT"],
+    ["minutesPT", "hearingTrial"],
+    ["hearingTrial", "endInvestigation"],
+    ["endInvestigation", "fileRec"],
+    ["fileRec", "recordOutcome"],
+    ["recordOutcome", "gOutcomeB"],
+    ["gOutcomeB", "endResolvedB", { label: "Liable" }],
+    ["gOutcomeB", "endDismissedB", { label: "Not Liable" }],
+  ];
+
+  // ---------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------
+  var svgNS = "http://www.w3.org/2000/svg";
+  var svg = document.getElementById("diagram");
+  var maxCol = 0;
+  Object.keys(N).forEach(function (k) { if (N[k].col > maxCol) maxCol = N[k].col; });
+  var width = nodeX(maxCol) + TASK_W + 90;
+  var height = TOP + totalLanesHeight() + 30;
+  svg.setAttribute("width", width);
+  svg.setAttribute("height", height);
+  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+  document.documentElement.style.setProperty("--head-h", HEAD_H + "px");
+  document.getElementById("dims").textContent = width + "×" + height + " px";
+
+  function css(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+  function el(tag, attrs) {
+    var n = document.createElementNS(svgNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function text(x, y, str, attrs) {
+    var t = el("text", Object.assign({ x: x, y: y, "text-anchor": "middle" }, attrs || {}));
+    var lines = String(str).split("\n");
+    var lh = attrs && attrs["font-size"] ? Number(attrs["font-size"]) * 1.28 : 13;
+    var startDy = -((lines.length - 1) / 2) * lh;
+    lines.forEach(function (line, i) {
+      var ts = el("tspan", { x: x, dy: i === 0 ? startDy : lh });
+      ts.textContent = line;
+      t.appendChild(ts);
+    });
+    return t;
+  }
+
+  // -- defs: arrowheads --
+  var defs = el("defs", {});
+  ["seq", "loop"].forEach(function (kind) {
+    var marker = el("marker", {
+      id: "arrow-" + kind, viewBox: "0 0 10 10", refX: "8.5", refY: "5",
+      markerWidth: "7.5", markerHeight: "7.5", orient: "auto-start-reverse",
+    });
+    marker.appendChild(el("path", { d: "M0,0 L10,5 L0,10 Z", fill: kind === "loop" ? css("--loop") : css("--ink-faint") }));
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+
+  // -- lane bands + rail --
+  var laneRail = document.getElementById("laneRail");
+  var spacer = document.createElement("div");
+  spacer.className = "lane-rail-spacer";
+  laneRail.appendChild(spacer);
+
+  LANES.forEach(function (lane, i) {
+    var y = laneTop(lane.id);
+    var h = laneHeightOf(lane.id);
+    svg.appendChild(el("rect", {
+      x: 0, y: y, width: width, height: h,
+      fill: i % 2 === 0 ? "transparent" : css(lane.varName + "-tint") || css("--maroon-tint"),
+    }));
+    svg.appendChild(el("line", { x1: 0, y1: y, x2: width, y2: y, stroke: css("--line"), "stroke-width": 1 }));
+
+    var item = document.createElement("div");
+    item.className = "lane-rail-item";
+    item.style.height = h + "px";
+    item.style.setProperty("--lane-color", css(lane.varName));
+    item.style.background = css(lane.varName + "-tint");
+    var nm = document.createElement("div");
+    nm.className = "lane-rail-name";
+    nm.textContent = lane.name;
+    item.appendChild(nm);
+    laneRail.appendChild(item);
+  });
+  svg.appendChild(el("line", { x1: 0, y1: TOP + totalLanesHeight(), x2: width, y2: TOP + totalLanesHeight(), stroke: css("--line"), "stroke-width": 1 }));
+
+  // -- edge routing (draw first, under nodes) --
+  var edgeLayer = el("g", {});
+  svg.appendChild(edgeLayer);
+
+  function portOf(node, side) {
+    var x = nodeX(node.col), y = nodeY(node);
+    var hw = node.type === "task" ? TASK_W / 2 : node.type === "gateway" ? GATE_S / 2 : EVT_R;
+    return { x: side === "right" ? x + hw : x - hw, y: y };
+  }
+
+  E.forEach(function (edge) {
+    var from = N[edge[0]], to = N[edge[1]], opts = edge[2] || {};
+    var isLoop = opts.kind === "loop";
+    var stroke = isLoop ? css("--loop") : css("--ink-faint");
+    var p1, p2, d;
+
+    if (isLoop) {
+      // Route beneath the source's lane band, back to the left, then up into the target.
+      var laneBottom = laneTop(from.lane) + laneHeightOf(from.lane);
+      var midY = laneBottom - 14;
+      p1 = { x: nodeX(from.col), y: nodeY(from) + (from.type === "task" ? TASK_H / 2 : GATE_S / 2) };
+      p2 = { x: nodeX(to.col), y: nodeY(to) + (to.type === "task" ? TASK_H / 2 : EVT_R) };
+      d = "M" + p1.x + "," + p1.y + " V" + midY + " H" + p2.x + " V" + p2.y;
+    } else {
+      var sameLane = from.lane === to.lane && (from.dy || 0) === (to.dy || 0);
+      p1 = portOf(from, "right");
+      p2 = portOf(to, "left");
+      if (sameLane) {
+        d = "M" + p1.x + "," + p1.y + " H" + p2.x;
+      } else {
+        var midX = (p1.x + p2.x) / 2;
+        d = "M" + p1.x + "," + p1.y + " H" + midX + " V" + p2.y + " H" + p2.x;
+      }
+    }
+
+    edgeLayer.appendChild(el("path", {
+      d: d, fill: "none", stroke: stroke, "stroke-width": isLoop ? 1.5 : 1.6,
+      "stroke-dasharray": isLoop ? "3 2.5" : "none",
+      "marker-end": "url(#arrow-" + (isLoop ? "loop" : "seq") + ")",
+    }));
+
+    if (opts.label) {
+      var lx = isLoop ? (p1.x + p2.x) / 2 : (p1.x + p2.x) / 2;
+      var ly = isLoop ? (laneTop(from.lane) + laneHeightOf(from.lane) - 14) - 6 : Math.min(p1.y, p2.y) - 7;
+      var bw = Math.max(opts.label.length * 6.2 + 10, 26);
+      edgeLayer.appendChild(el("rect", {
+        x: lx - bw / 2, y: ly - 12, width: bw, height: 16, rx: 3,
+        fill: css("--paper"),
+      }));
+      edgeLayer.appendChild(text(lx, ly, opts.label, {
+        "font-size": 10.5, fill: isLoop ? css("--loop") : css("--ink-soft"), "font-weight": isLoop ? 600 : 500,
+      }));
+    }
+  });
+
+  // -- annotation: external outcome note --
+  (function () {
+    var target = N.recordOutcome;
+    var ax = nodeX(target.col) - 8, ay = nodeY(target) - TASK_H / 2 - 54;
+    var aw = 214, ah = 42;
+    edgeLayer.appendChild(el("rect", { x: ax, y: ay, width: aw, height: ah, rx: 4, class: "annotation-box" }));
+    edgeLayer.appendChild(text(ax + aw / 2, ay + 15, "University President's office", { "font-size": 10.5, "font-weight": 600, fill: css("--ink-soft") }));
+    edgeLayer.appendChild(text(ax + aw / 2, ay + 30, "external — no system account", { "font-size": 10, fill: css("--ink-faint") }));
+    edgeLayer.appendChild(el("path", {
+      d: "M" + (ax + aw / 2) + "," + (ay + ah) + " V" + (nodeY(target) - TASK_H / 2 - 4),
+      stroke: css("--ink-faint"), "stroke-width": 1, "stroke-dasharray": "2 3",
+    }));
+  })();
+
+  // -- nodes --
+  var nodeLayer = el("g", {});
+  svg.appendChild(nodeLayer);
+
+  Object.keys(N).forEach(function (key) {
+    var n = N[key];
+    var x = nodeX(n.col), y = nodeY(n);
+    var laneColor = css(LANES[laneIndex(n.lane)].varName);
+
+    if (n.type === "start") {
+      nodeLayer.appendChild(el("circle", { cx: x, cy: y, r: EVT_R, fill: css("--surface"), stroke: css("--ink-soft"), "stroke-width": 1.8 }));
+      nodeLayer.appendChild(text(x, y + EVT_R + 15, n.label, { "font-size": 10.5, fill: css("--ink-soft"), "font-weight": 600 }));
+    } else if (n.type === "end") {
+      var ec = n.kind === "resolved" ? css("--resolved") : css("--dismissed");
+      var et = n.kind === "resolved" ? css("--resolved-tint") : css("--dismissed-tint");
+      nodeLayer.appendChild(el("circle", { cx: x, cy: y, r: EVT_R, fill: et, stroke: ec, "stroke-width": 3 }));
+      nodeLayer.appendChild(text(x, y + EVT_R + 15, n.label, { "font-size": 10.5, fill: ec, "font-weight": 700 }));
+      if (n.sub) nodeLayer.appendChild(text(x, y + EVT_R + 29, n.sub, { "font-size": 9, fill: ec, class: "node-sub" }));
+    } else if (n.type === "gateway") {
+      var half = GATE_S / 2;
+      var pts = [x, y - half, x + half, y, x, y + half, x - half, y].join(" ").replace(/(\S+) (\S+)/g, "$1,$2 ").trim();
+      nodeLayer.appendChild(el("polygon", {
+        points: (x) + "," + (y - half) + " " + (x + half) + "," + y + " " + x + "," + (y + half) + " " + (x - half) + "," + y,
+        fill: css("--surface"), stroke: laneColor, "stroke-width": 2,
+      }));
+      nodeLayer.appendChild(text(x, y - half - 12, n.label, { "font-size": 10.5, fill: css("--ink"), "font-weight": 600 }));
+    } else {
+      nodeLayer.appendChild(el("rect", {
+        x: x - TASK_W / 2, y: y - TASK_H / 2, width: TASK_W, height: TASK_H, rx: 8,
+        fill: css("--surface"), stroke: laneColor, "stroke-width": 1.6,
+      }));
+      nodeLayer.appendChild(el("rect", { x: x - TASK_W / 2, y: y - TASK_H / 2, width: 4, height: TASK_H, fill: laneColor }));
+      var hasSub = !!n.sub;
+      nodeLayer.appendChild(text(x + 3, y + (hasSub ? -6 : 0), n.label, { "font-size": 11.5, fill: css("--ink"), "font-weight": 600 }));
+      if (hasSub) {
+        nodeLayer.appendChild(text(x + 3, y + TASK_H / 2 - 9, n.sub, {
+          "font-size": 8.6, fill: laneColor, class: "node-sub", "font-weight": 600,
+        }));
+      }
+    }
+  });
+})();
+</script>
